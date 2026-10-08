@@ -33,7 +33,7 @@ class AgentRuntime:
     def _observe(self, task_id: str, state: dict) -> tuple[int, bool]:
         observation = self.robot.observe()
         obs_id = self.memory.update(observation)
-        state["observed_cells"] = sorted(set(state["observed_cells"]) | {
+        state["observed_cells"] = sorted({tuple(p) for p in state["observed_cells"]} | {
             (p.x, p.y) for p in observation.visible_cells
         })
         self.events.emit(
