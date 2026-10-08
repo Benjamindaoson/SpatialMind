@@ -19,13 +19,13 @@ class AgentRuntime:
     def __init__(
         self, robot: RobotAdapter, world_map: GridWorld,
         memory: SpatialMemory, events: EventStore,
-        *, max_navigation_retries: int = 2,
+        *, max_navigation_retries: int = 2, interpreter: object | None = None,
     ) -> None:
         self.robot = robot
         self.world_map = world_map
         self.memory = memory
         self.events = events
-        self.interpreter = RuleBasedInterpreter()
+        self.interpreter = interpreter or RuleBasedInterpreter()
         self.planner = ActiveSearchPlanner(world_map)
         self.context = ContextEngine(memory)
         self.max_navigation_retries = max_navigation_retries
@@ -115,6 +115,7 @@ class AgentRuntime:
             }
             self.events.emit(
                 task_id, "task_created", command=command, request=asdict(request),
+                grounding_metadata=getattr(self.interpreter, "last_metadata", None),
             )
         _, found = self._observe(task_id, state)
         request = TaskRequest(**state["request"])
@@ -194,6 +195,7 @@ def open_runtime(
     world: GridWorld | None = None,
     *, data_dir: str | Path = ".spatialmind",
     sensor_range: int = 3,
+    interpreter: object | None = None,
 ) -> tuple[AgentRuntime, GridWorld]:
     """Convenience factory for the executable grid-world backend."""
     from spatialmind.world import SimRobot
@@ -204,4 +206,4 @@ def open_runtime(
     robot = SimRobot(world, sensor_range=sensor_range)
     memory = SpatialMemory(location / "memory.sqlite3")
     events = EventStore(location / "events.sqlite3")
-    return AgentRuntime(robot, world, memory, events), world
+    return AgentRuntime(robot, world, memory, events, interpreter=interpreter), world
