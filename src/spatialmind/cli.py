@@ -25,13 +25,15 @@ def main() -> None:
     demo.add_argument("--show-world", action="store_true")
     bench = commands.add_parser("benchmark", help="Run interventions and ablations")
     bench.add_argument("--output", default="artifacts/benchmark.json")
+    bench.add_argument("--seeds", type=int, default=1, help="Number of independent deterministic seeds")
+    bench.add_argument("--trace-dir", default=None, help="Save event logs for every trial")
     report = commands.add_parser("trace", help="Inspect a task's event stream")
     report.add_argument("task_id")
     report.add_argument("--data-dir", default=".spatialmind")
     args = parser.parse_args()
 
     if args.command == "benchmark":
-        print(json.dumps(run_suite(output=args.output), indent=2))
+        print(json.dumps(run_suite(output=args.output, seeds=args.seeds, trace_dir=args.trace_dir), indent=2))
         return
 
     interpreter = None
