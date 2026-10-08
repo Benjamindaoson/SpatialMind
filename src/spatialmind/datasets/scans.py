@@ -27,6 +27,16 @@ def scan_records(root: Path, *, limit: int = 1000) -> Iterator[DatasetRecord]:
         for scene in metadata:
             reference = str(scene["reference"])
             split = str(scene.get("type", "unspecified"))
+            yield DatasetRecord(
+                "3rscan", "scan_group", reference, reference, split,
+                data={"reference_scan": reference,
+                      "rescan_ids": [str(x["reference"]) for x in scene.get("scans", [])],
+                      "change_annotation_count": len(scene.get("scans", [])),
+                      "is_ground_truth_metadata": True},
+            )
+            emitted += 1
+            if emitted >= limit:
+                return
             for rescan in scene.get("scans", []):
                 child = str(rescan["reference"])
                 payload = {
@@ -53,6 +63,15 @@ def scan_records(root: Path, *, limit: int = 1000) -> Iterator[DatasetRecord]:
         if not semseg.is_relative_to(root):
             continue
         doc = _load_json(semseg)
+        yield DatasetRecord(
+            "3rscan", "scan_asset", semseg.parent.name, semseg.parent.name,
+            data={"scan_id": semseg.parent.name,
+                  "semantic_annotation": semseg.relative_to(root).as_posix(),
+                  "requires_scene_alignment": True},
+        )
+        emitted += 1
+        if emitted >= limit:
+            break
         scan_id = str(doc.get("scan_id", semseg.parent.name))
         for instance in doc.get("segGroups", []):
             if emitted >= limit:
