@@ -119,6 +119,18 @@ class AsyncAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(outcome.status,"succeeded")
         self.assertGreater(outcome.motion_m,0)
 
+    async def test_persistent_checkpoint_restored_after_new_agent_instance(self):
+        self.robot.place("toolbox_a",Pose2D(17,9))
+        first=await self.agent.run(Mission("find","blue toolbox",max_actions=1))
+        self.assertEqual(first.status,"interrupted")
+        restarted=AsyncPhysicalAgent(
+            self.robot,demo_room_map(),self.memory,self.events)
+        outcome=await restarted.resume(first.task_id,max_actions=24)
+        self.assertEqual(outcome.status,"succeeded")
+        self.assertEqual(outcome.task_id,first.task_id)
+        self.assertTrue(any(e["type"]=="mission_resumed"
+                            for e in self.events.events(first.task_id)))
+
     async def test_live_cancellation(self):
         self.robot.latency_s=.05
         task_id=await self.agent.start(Mission("navigate","meeting","meeting"))
