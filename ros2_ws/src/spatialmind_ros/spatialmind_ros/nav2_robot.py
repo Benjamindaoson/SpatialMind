@@ -22,6 +22,7 @@ class Nav2MetricRobot:
         from nav2_msgs.action import NavigateToPose
         from action_msgs.msg import GoalStatus
         from geometry_msgs.msg import PoseWithCovarianceStamped
+        from nav_msgs.msg import Odometry
         from std_msgs.msg import String
         if not rclpy.ok():
             rclpy.init()
@@ -36,11 +37,16 @@ class Nav2MetricRobot:
         self._localized=False
         self._goal=None
         self._feedback_distance=None
+        self._odom_previous=None
+        self._odom_distance_m=0.0
+        self._odom_count=0
+        self._last_nav_finished=0.0
         self._observations=[]
         self._observation_lock=threading.Lock()
         self.node.create_subscription(PoseWithCovarianceStamped,
                                       "/amcl_pose",self._on_pose,10)
         self.node.create_subscription(String,observation_topic,self._on_obs,10)
+        self.node.create_subscription(Odometry,"/odom",self._on_odom,10)
         self.executor=MultiThreadedExecutor(num_threads=2)
         self.executor.add_node(self.node)
         self.thread=threading.Thread(target=self.executor.spin,daemon=True)
@@ -63,6 +69,18 @@ class Nav2MetricRobot:
                           time.time(),variance)
         self._localized=True
 
+    def _on_odom(self,msg):
+        p=msg.pose.pose.position
+        current=(p.x,p.y)
+        if self._odom_previous is not None:
+            import math
+            delta=math.hypot(current[0]-self._odom_previous[0],
+                             current[1]-self._odom_previous[1])
+            if delta<=1.0:
+                self._odom_distance_m+=delta
+                self._odom_count+=1
+        self._odom_previous=current
+
     def _on_obs(self,msg):
         try:
             payload=json.loads(msg.data)
@@ -77,8 +95,10 @@ class Nav2MetricRobot:
                 float(item["confidence"]),
                 item.get("track_id"),item.get("evidence_ref"),
             ) for item in payload["detections"])
+            localized=Pose2D(self._pose.x,self._pose.y,self._pose.yaw,
+                             self.map_frame,stamp,self._pose.position_variance)
             obs=MetricObservation(
-                self._pose,det,
+                localized,det,
                 frozenset(tuple(c) for c in payload.get("visible_cells",[])),
                 float(payload.get("coverage_quality",0)),source="ros-rgbd",
             )
@@ -95,9 +115,9 @@ class Nav2MetricRobot:
             try:
                 result=done.result()
             except Exception as exc:
-                loop.call_soon_threadsafe(wrapped.set_exception,exc)
+                loop.call_soon_threadsafe(lambda: not wrapped.done() and wrapped.set_exception(exc))
             else:
-                loop.call_soon_threadsafe(wrapped.set_result,result)
+                loop.call_soon_threadsafe(lambda: not wrapped.done() and wrapped.set_result(result))
         future.add_done_callback(callback)
         return await asyncio.wait_for(wrapped,timeout=timeout_s)
 
@@ -108,6 +128,7 @@ class Nav2MetricRobot:
             return MotionResult(False,"localization_unavailable")
         start=self.pose
         started=time.monotonic()
+        baseline_odom=self._odom_distance_m
         ready=await asyncio.to_thread(self.action.wait_for_server,timeout_sec=5)
         if not ready:
             return MotionResult(False,"nav2_action_unavailable")
@@ -132,12 +153,16 @@ class Nav2MetricRobot:
                 "pose_verification_failed" if success else "nav2_failed")
             return MotionResult(success and near_goal,reason,
                                 time.monotonic()-started,
-                                start.distance(self.pose),str(handle.goal_id))
+                                max(0,self._odom_distance_m-baseline_odom)
+                                if self._odom_count else start.distance(self.pose),
+                                str(handle.goal_id))
         except asyncio.TimeoutError:
             await self.stop()
             return MotionResult(False,"navigation_timeout",time.monotonic()-started,
-                                start.distance(self.pose))
+                                max(0,self._odom_distance_m-baseline_odom)
+                                if self._odom_count else start.distance(self.pose))
         finally:
+            self._last_nav_finished=time.monotonic()
             self._goal=None
 
     def _on_feedback(self,message):
@@ -152,7 +177,9 @@ class Nav2MetricRobot:
                 observations=list(self._observations)
             if observations:
                 at,obs=observations[-1]
-                if time.monotonic()-at<self.timeout_s:
+                if (at>=self._last_nav_finished
+                        and time.monotonic()-at<self.timeout_s
+                        and obs.pose.distance(self.pose)<0.75):
                     return obs
             await asyncio.sleep(.05)
         raise TimeoutError("RGB-D perception stream not available or stale")
