@@ -74,7 +74,8 @@ def _episode_records(name: str, path: Path, root: Path, remaining: int) -> Itera
                 "episode_id": episode_id,
                 "goals": ep.get("goals"),
                 "tasks": ep.get("tasks", ep.get("task_sequence")),
-                "goals_by_category": doc.get("goals_by_category", {}),
+                "goals_by_category_lookup_required": bool(doc.get("goals_by_category")),
+                "goals_key_hint": str(ep.get("object_category", "")),
                 "info": ep.get("info", {}),
             },
         )
