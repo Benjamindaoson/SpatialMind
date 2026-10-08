@@ -40,7 +40,7 @@ footer{color:var(--muted);font-size:12px;margin-top:20px}@media(max-width:780px)
 <script>
 const el=id=>document.getElementById(id);
 const enc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let active=false,blocked=false;
+let active=false,blocked=false,sessionId=null;
 async function req(url,method='GET',body){const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error(data.detail||r.statusText);return data;}
 async function refresh(){
 const s=await req('/api/state');
@@ -52,7 +52,7 @@ el('memory').innerHTML=s.memory.length?s.memory.map(m=>'<div class="entry"><stro
 el('events').textContent=s.events.map(e=>e.id+' · '+e.type+' · '+JSON.stringify(e.data)).join('\n')||'No events yet.';
 }
 async function act(fn){if(active)return;active=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn();await refresh()}catch(e){el('status').textContent='Error: '+e.message}finally{active=false;document.querySelectorAll('button').forEach(b=>b.disabled=false)}}
-el('run').onclick=()=>act(async()=>{el('status').textContent='Executing…';const r=await req('/api/tasks','POST',{instruction:el('instruction').value,max_actions:80});el('status').textContent=r.status.toUpperCase()+' · '+r.reason+' · task '+r.task_id+' · actions '+r.steps+' · replans '+r.replans;});
+el('run').onclick=()=>act(async()=>{el('status').textContent='Executing…';const r=await req('/api/chat','POST',{message:el('instruction').value,session_id:sessionId,max_actions:80});sessionId=r.session_id;el('status').textContent=r.reply;});
 el('move').onclick=()=>act(async()=>{await req('/api/world/move/toolbox_1/office','POST');el('status').textContent='Physical object moved; memory intentionally retains its previous belief until re-observed.'});
 el('block').onclick=()=>act(async()=>{blocked=!blocked;await req('/api/world/obstacle','POST',{x:9,y:3,blocked});el('status').textContent=blocked?'East doorway blocked':'East doorway unblocked';});
 el('refresh').onclick=()=>act(async()=>{el('status').textContent='World refreshed'});
