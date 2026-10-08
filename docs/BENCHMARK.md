@@ -16,6 +16,7 @@ Run:
 
 ~~~bash
 spatialmind benchmark --output artifacts/benchmark.json
+spatialmind benchmark --seeds 20 --output artifacts/benchmark-20seeds.json --trace-dir artifacts/traces
 ~~~
 
 Current deterministic scenarios:
