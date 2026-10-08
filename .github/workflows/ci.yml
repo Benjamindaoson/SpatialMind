@@ -26,11 +26,13 @@ jobs:
       - name: Demonstrate an evidenced task
         run: spatialmind demo --data-dir /tmp/spatialmind-ci --instruction "Find the blue toolbox"
       - name: Run intervention comparison
-        run: spatialmind benchmark --output /tmp/spatialmind-benchmark.json
+        run: spatialmind benchmark --seeds 3 --output /tmp/spatialmind-benchmark.json --trace-dir /tmp/spatialmind-traces
       - name: Preserve benchmark results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: grid-benchmark
-          path: /tmp/spatialmind-benchmark.json
+          path: |
+            /tmp/spatialmind-benchmark.json
+            /tmp/spatialmind-traces/
           if-no-files-found: ignore
