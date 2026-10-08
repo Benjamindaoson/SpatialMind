@@ -115,7 +115,7 @@ class Nav2MetricRobot:
             try:
                 result=done.result()
             except Exception as exc:
-                loop.call_soon_threadsafe(lambda: not wrapped.done() and wrapped.set_exception(exc))
+                loop.call_soon_threadsafe(lambda error=exc: not wrapped.done() and wrapped.set_exception(error))
             else:
                 loop.call_soon_threadsafe(lambda: not wrapped.done() and wrapped.set_result(result))
         future.add_done_callback(callback)
