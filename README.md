@@ -59,6 +59,8 @@ The metric simulation obtains object evidence exclusively through the robot obse
 
 Detailed specifications: **[Gazebo/ROS2 runbook](docs/ROS2_GAZEBO.md)** · **[Physical benchmark](docs/PHYSICAL_EVALUATION.md)** · **[Implementation plan](docs/IMPLEMENTATION_PLAN.md)**
 
+**[Measured 336-trial metric-simulation results (including negative baselines)](docs/METRIC_BENCHMARK_RESULTS.md)** — 49 software tests passed, but the nearest-search baseline beats the full agent on mean travel distance. Do not attribute these metrics to Gazebo or physical hardware.
+
 ---
 
 ## Why SpatialMind?
