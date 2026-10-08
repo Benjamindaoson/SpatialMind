@@ -150,6 +150,8 @@ class RoomMap:
         import json
         with open(path, encoding="utf-8") as source:
             obj = json.load(source)
+        if obj.get("calibrated") is not True:
+            raise ValueError("Semantic waypoints are not calibrated for the active ROS map")
         return cls({
             room: [Pose2D(float(p["x"]), float(p["y"]), float(p.get("yaw", 0)),
                           obj.get("frame_id", "map"))
