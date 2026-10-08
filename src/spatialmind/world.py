@@ -208,7 +208,7 @@ class SimRobot:
             and self._has_line_of_sight(Point(x, y))
         )
         detections = tuple(
-            Detection(item.label, item.position, 1.0, item.object_id)
+            Detection(item.label, item.position, 1.0, item.object_id, self.world.room_at(item.position))
             for item in self.world.objects.values()
             if item.position in cells
         )
