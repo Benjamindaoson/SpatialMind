@@ -105,7 +105,7 @@ class SpatialMemory:
                         sightings=excluded.sightings
                 """, (
                     object_id, detection.label.lower(), detection.position.x,
-                    detection.position.y, observation.room,
+                    detection.position.y, detection.room or observation.room,
                     detection.confidence, obs_id, sightings,
                 ))
             for row in self.db.execute(
