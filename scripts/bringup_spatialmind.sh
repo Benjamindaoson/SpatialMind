@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Requires Ubuntu 24.04, ROS2 Jazzy, Nav2, Gazebo Harmonic and xacro.
 # Starts navigation in generated world; vision bridge is launched separately.
-set -euo pipefail
+set -eo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 if [[ ! -f /opt/ros/jazzy/setup.bash ]]; then
   echo "ROS2 Jazzy missing" >&2
   exit 2
 fi
 source /opt/ros/jazzy/setup.bash
+set -u
 python3 "$ROOT/scripts/generate_gazebo_scene.py" --out "$ROOT/simulation/generated"
 SIM_SHARE="$(ros2 pkg prefix --share nav2_minimal_tb3_sim 2>/dev/null || true)"
 if [[ -z "$SIM_SHARE" ]]; then
