@@ -27,6 +27,19 @@ jobs:
         run: spatialmind demo --data-dir /tmp/spatialmind-ci --instruction "Find the blue toolbox"
       - name: Run intervention comparison
         run: spatialmind benchmark --seeds 3 --output /tmp/spatialmind-benchmark.json --trace-dir /tmp/spatialmind-traces
+      - name: Build non-root mission-control Docker image
+        run: docker build --tag spatialmind-ci .
+      - name: Smoke-test containerized API
+        run: |
+          docker run --detach --name spatialmind-ci --publish 127.0.0.1:8000:8000 spatialmind-ci
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/healthz; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8000/healthz
+          docker rm --force spatialmind-ci
       - name: Preserve benchmark results
         if: always()
         uses: actions/upload-artifact@v4
