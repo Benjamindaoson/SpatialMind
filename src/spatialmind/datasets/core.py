@@ -56,6 +56,28 @@ def read_records(path: Path | str) -> Iterator[DatasetRecord]:
             yield DatasetRecord(**obj)
 
 
+def verify_local_assets(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Validate original file references, not just the exported JSONL checksum."""
+    root = Path(manifest["source_root"])
+    checked = 0
+    missing: list[str] = []
+    fields = ("rgb", "depth", "archive_path", "source_file",
+              "semantic_annotation")
+    for record in read_records(manifest["records_path"]):
+        for field in fields:
+            reference = record.data.get(field)
+            if not reference:
+                continue
+            checked += 1
+            try:
+                safe_input_file(root, reference)
+            except (FileNotFoundError, ValueError):
+                missing.append(f"{record.id}:{field}:{reference}")
+    return {"checked_asset_references": checked,
+            "missing_or_invalid_references": missing,
+            "verified": not missing}
+
+
 def sha256_file(path: Path, *, chunk_size: int = 1 << 20) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
