@@ -75,7 +75,7 @@ class RGBDProjector:
         if len(pixel_depths) < 2:
             return None
         z = statistics.median(pixel_depths)
-        u_center = ((x0+x1) * 0.5 - self.k.cx) * z / self.k.fx
+        u_center = ((x0+x1-1) * 0.5 - self.k.cx) * z / self.k.fx
         # optical x: positive robot-right; optical z: forward
         yaw = map_camera.yaw
         x = map_camera.x + z*math.cos(yaw) - u_center*math.sin(yaw)
