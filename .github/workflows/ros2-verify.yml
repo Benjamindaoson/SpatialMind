@@ -1,0 +1,95 @@
+name: ROS2 Jazzy / Gazebo Harmonic Integration
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ros2_ws/**'
+      - 'scripts/generate_gazebo_scene.py'
+      - 'scripts/build_rgbd_robot.py'
+      - '.github/workflows/ros2-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ros2-assets-and-bringup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    container:
+      image: ubuntu:noble
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      QT_QPA_PLATFORM: offscreen
+      LIBGL_ALWAYS_SOFTWARE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ROS 2 Jazzy
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: jazzy
+      - name: Install compatible Gazebo Harmonic and ros_gz
+        uses: gazebo-tooling/setup-gazebo@v0.3.0
+        with:
+          required-gazebo-distributions: harmonic
+          install-ros-gz: jazzy
+      - name: Install Nav2 / simulation build dependencies
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ros-jazzy-navigation2 ros-jazzy-nav2-bringup \
+            ros-jazzy-nav2-minimal-tb3-sim \
+            ros-jazzy-message-filters ros-jazzy-nav-msgs \
+            ros-jazzy-tf2-ros ros-jazzy-xacro
+      - name: Build SpatialMind ROS2 workspace
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$PYTHONPATH"
+          cd ros2_ws
+          colcon build --symlink-install --packages-select spatialmind_ros \
+            --event-handlers console_direct+
+          source install/setup.bash
+          ros2 pkg executables spatialmind_ros
+      - name: Validate generated Gazebo SDF, map and RGBD robot
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          python3 scripts/generate_gazebo_scene.py --out simulation/generated
+          python3 scripts/build_rgbd_robot.py \
+            --xacro "$(ros2 pkg prefix --share nav2_minimal_tb3_sim)/urdf/gz_waffle.sdf.xacro" \
+            --output simulation/generated/robot_rgbd.sdf
+          gz sdf -p simulation/generated/room_world.sdf.xacro > /tmp/world-validated.sdf
+          gz sdf -p simulation/generated/robot_rgbd.sdf > /tmp/robot-validated.sdf
+      - name: Headless Nav2 action-server bringup check
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$PYTHONPATH"
+          bash scripts/bringup_spatialmind.sh > /tmp/gazebo.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          found=0
+          for i in $(seq 1 35); do
+            if ros2 action list -t 2>/dev/null | grep -F 'navigate_to_pose [nav2_msgs/action/NavigateToPose]'; then
+              found=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          tail -n 80 /tmp/gazebo.log || true
+          test "$found" -eq 1
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ros2-gazebo-diagnostics
+          path: |
+            /tmp/gazebo.log
+            /tmp/world-validated.sdf
+            /tmp/robot-validated.sdf
+          if-no-files-found: ignore
