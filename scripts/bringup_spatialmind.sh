@@ -9,11 +9,12 @@ if [[ ! -f /opt/ros/jazzy/setup.bash ]]; then
 fi
 source /opt/ros/jazzy/setup.bash
 python3 "$ROOT/scripts/generate_gazebo_scene.py" --out "$ROOT/simulation/generated"
-ROBOT_XACRO="$(ros2 pkg prefix --share nav2_bringup)/../nav2_minimal_tb3_sim/urdf/gz_waffle.sdf.xacro"
-# nav2 minimal sim source path differs between package releases:
-if [[ ! -f "$ROBOT_XACRO" ]]; then
-  ROBOT_XACRO="$(ros2 pkg prefix --share nav2_bringup)/../nav2_minimal_tb3_sim/urdf/gz_waffle.sdf.xacro"
+SIM_SHARE="$(ros2 pkg prefix --share nav2_minimal_tb3_sim 2>/dev/null || true)"
+if [[ -z "$SIM_SHARE" ]]; then
+  echo "Required ROS2 package nav2_minimal_tb3_sim was not found." >&2
+  exit 2
 fi
+ROBOT_XACRO="$SIM_SHARE/urdf/gz_waffle.sdf.xacro"
 if [[ ! -f "$ROBOT_XACRO" ]]; then
   echo "Find the installed gz_waffle.sdf.xacro and pass it to build_rgbd_robot.py." >&2
   echo "Run official nav2_bringup tb3_simulation_launch.py as fallback." >&2
