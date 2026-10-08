@@ -13,6 +13,8 @@ from spatialmind.runtime import open_runtime
 def main() -> None:
     parser = argparse.ArgumentParser(prog="spatialmind")
     commands = parser.add_subparsers(dest="command", required=True)
+    data = commands.add_parser("data", help="Import and replay licensed public robot datasets")
+    data.add_argument("data_args", nargs=argparse.REMAINDER)
     demo = commands.add_parser("demo", help="Execute a grounded mobile robot task")
     demo.add_argument("--instruction", default="Find the blue toolbox")
     demo.add_argument("--llm-model", default=None, help="Opt-in OpenAI-compatible model")
@@ -35,6 +37,11 @@ def main() -> None:
     report.add_argument("task_id")
     report.add_argument("--data-dir", default=".spatialmind")
     args = parser.parse_args()
+
+    if args.command == "data":
+        from spatialmind.datasets.cli import main as data_main
+        data_main(args.data_args)
+        return
 
     if args.command == "benchmark":
         print(json.dumps(run_suite(output=args.output, seeds=args.seeds, trace_dir=args.trace_dir), indent=2))
