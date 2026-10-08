@@ -1,4 +1,11 @@
 .venv/
+data/
+datasets_raw/
+data_cache/
+*.bag
+*.db3
+*.mcap
+
 __pycache__/
 .pytest_cache/
 .ruff_cache/
