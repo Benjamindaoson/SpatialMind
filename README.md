@@ -144,6 +144,8 @@ The container runs under an unprivileged user, binds the dashboard to **127.0.0.
 | Layer | Source | Responsibility |
 |---|---|---|
 | Intent grounding | [language.py](src/spatialmind/language.py) | Conservative command parsing and explicit clarification |
+| Optional model grounding | [llm.py](src/spatialmind/llm.py) | Validated structured intent with usage/latency metadata |
+| Dialogue | [dialogue.py](src/spatialmind/dialogue.py) | Session-level clarification and mission-status interaction |
 | Decision runtime | [runtime.py](src/spatialmind/runtime.py) | Task lifecycle, observation, verification, recovery, budget, checkpoint |
 | Information planner | [planner.py](src/spatialmind/planner.py) | First check credible memory, then choose viewpoints for new observations |
 | Temporal memory | [memory.py](src/spatialmind/memory.py) | Persistent sightings, identity, room/pose, confidence, negative evidence |
@@ -276,6 +278,8 @@ SpatialMind/
 │   ├── models.py                # Typed robot and agent contracts
 │   ├── world.py                 # Deterministic navigation and observation backend
 │   ├── language.py              # Safe reference command grounding
+│   ├── llm.py                   # Optional schema-governed LLM intent parsing
+│   ├── dialogue.py              # Session-level clarification and status
 │   ├── memory.py                # Temporal spatial belief store
 │   ├── context.py               # Bounded context projection
 │   ├── planner.py               # Active viewpoint search
