@@ -6,6 +6,8 @@ we retain source units and matrices rather than silently aligning them.
 from __future__ import annotations
 
 import json
+import re
+from zipfile import ZipFile
 from pathlib import Path
 from typing import Iterator
 
@@ -108,3 +110,40 @@ def scan_records(root: Path, *, limit: int = 1000) -> Iterator[DatasetRecord]:
             },
         )
         emitted += 1
+        if emitted >= limit:
+            break
+        # Read ZIP central directory only; never auto-extract 3RScan's licensed
+        # image payload or trust arbitrary archive member paths.
+        with ZipFile(sequence_zip) as archive:
+            entries = set(archive.namelist())
+            for rgb in sorted(entries):
+                match = re.search(r"(frame-[0-9]+)\\.color\\.jpg$", rgb)
+                if not match or rgb.startswith("/") or ".." in rgb.split("/"):
+                    continue
+                stem = rgb[:-len(".color.jpg")]
+                depth = stem + ".depth.pgm"
+                pose = stem + ".pose.txt"
+                if depth not in entries or pose not in entries:
+                    continue
+                yield DatasetRecord(
+                    "3rscan", "scan_rgbd_frame",
+                    f"{sequence_zip.parent.name}:{match.group(1)}",
+                    sequence_zip.parent.name,
+                    data={
+                        "archive_path": sequence_zip.relative_to(root).as_posix(),
+                        "rgb_member": rgb,
+                        "depth_member": depth,
+                        "pose_member": pose,
+                        "camera_info_member": next(
+                            (name for name in entries if name.endswith("/_info.txt")),
+                            None,
+                        ),
+                        "depth_scale_to_m": 0.001,
+                        "camera_pose_convention": "camera_to_scan_world_matrix",
+                        "frame": "3rscan_scan_local",
+                        "source": "offline_3rscan_sequence_not_robot_action",
+                    },
+                )
+                emitted += 1
+                if emitted >= limit:
+                    return
