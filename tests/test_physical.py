@@ -113,6 +113,18 @@ class AsyncAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(b.evidence_ref)
         self.assertTrue(any(x["type"]=="goal_verified" for x in self.events.events(b.task_id)))
 
+    async def test_navigation_does_not_require_camera_but_search_does(self):
+        class NoCamera(MetricSimRobot):
+            async def observe(self):
+                raise TimeoutError("camera not connected")
+        blind=NoCamera()
+        actor=AsyncPhysicalAgent(blind,demo_room_map(),self.memory,self.events)
+        nav=await actor.run(Mission("navigate","meeting","meeting"))
+        self.assertEqual(nav.status,"succeeded")
+        find=await actor.run(Mission("find","blue toolbox"))
+        self.assertEqual(find.status,"failed")
+        self.assertEqual(find.reason,"perception_unavailable")
+
     async def test_hidden_moved_target(self):
         self.robot.place("toolbox_a",Pose2D(17,9))
         outcome=await self.agent.run(Mission("find","blue toolbox",max_actions=20))
