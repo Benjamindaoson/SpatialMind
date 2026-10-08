@@ -67,6 +67,22 @@ def _episode_records(name: str, path: Path, root: Path, remaining: int) -> Itera
         )
         # Oracle is partitioned to a separate file. Even though raw episodes
         # contain goal metadata, consumers should not read oracle.jsonl.
+        category = str(ep.get("object_category", ""))
+        scene_slug = Path(scene).stem.replace(".basis", "")
+        all_goals = doc.get("goals_by_category", {})
+        # Habitat ObjectNav often stores category targets separately; keep only
+        # this episode's matching oracle entries, never policy-visible answers.
+        matched_goals = {}
+        if category and isinstance(all_goals, dict):
+            exact_keys = (f"{scene_slug}_{category}", f"{Path(scene).parent.name}_{category}")
+            for key in exact_keys:
+                if key in all_goals:
+                    matched_goals[key] = all_goals[key]
+            if not matched_goals:
+                candidates = [k for k in all_goals
+                              if k.endswith("_" + category) and scene_slug in k]
+                if len(candidates) == 1:
+                    matched_goals[candidates[0]] = all_goals[candidates[0]]
         yield DatasetRecord(
             name, "oracle_navigation", uid, scene, split,
             data={
@@ -74,8 +90,8 @@ def _episode_records(name: str, path: Path, root: Path, remaining: int) -> Itera
                 "episode_id": episode_id,
                 "goals": ep.get("goals"),
                 "tasks": ep.get("tasks", ep.get("task_sequence")),
-                "goals_by_category_lookup_required": bool(doc.get("goals_by_category")),
-                "goals_key_hint": str(ep.get("object_category", "")),
+                "goals_by_category": matched_goals,
+                "goals_lookup_missing": bool(all_goals) and not bool(matched_goals),
                 "info": ep.get("info", {}),
             },
         )
