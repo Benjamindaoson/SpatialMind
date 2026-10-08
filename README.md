@@ -124,6 +124,19 @@ Open **http://127.0.0.1:8000**. The interface is served locally and contains:
 
 > The dashboard shows the **reference simulator's world**, not an actual SLAM occupancy map. Data may persist in SQLite across requests; simulated world geometry and object poses reset on server restart. Do not expose this development dashboard on the public internet without authentication.
 
+### Docker Compose (local-only)
+
+For a self-contained local dashboard without creating a Python virtual environment:
+
+~~~bash
+docker compose up --build -d
+# Visit http://127.0.0.1:8000
+docker compose logs -f mission-control
+docker compose down
+~~~
+
+The container runs under an unprivileged user, binds the dashboard to **127.0.0.1**, and stores SQLite files in a named volume. This Docker image runs the **grid simulation**; it does not bundle or launch Gazebo/ROS2 and is not suitable for direct robot-control deployment.
+
 ## 🧠 System Architecture
 
 ![System architecture](docs/images/architecture.svg)
@@ -274,6 +287,7 @@ SpatialMind/
 │   ├── cli.py                   # CLI entrypoint
 │   └── static/index.html        # Browser mission dashboard
 ├── tests/test_core.py
+├── Dockerfile / compose.yaml      # Local non-root dashboard container
 ├── pyproject.toml
 ├── LICENSE
 └── README.md
