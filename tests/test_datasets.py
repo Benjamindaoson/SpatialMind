@@ -201,5 +201,55 @@ class DatasetAdapterTests(unittest.TestCase):
         self.assertEqual(report["memory_objects"], 1)
 
 
+class ExtraDatasetIntegrationTests(unittest.TestCase):
+    def test_3rscan_zip_central_directory_indexing(self):
+        from zipfile import ZipFile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scan = root / "scan-01"
+            scan.mkdir()
+            with ZipFile(scan / "sequence.zip", "w") as archive:
+                archive.writestr("sequence/_info.txt", "m_depthShift = 1000")
+                archive.writestr("sequence/frame-000000.color.jpg", b"fake-image")
+                archive.writestr("sequence/frame-000000.depth.pgm", b"fake-depth")
+                archive.writestr("sequence/frame-000000.pose.txt", "1 0 0 0")
+            report = prepare_dataset("3rscan", root, root/"converted")
+            records = list(read_records(root/"converted"/"records.jsonl"))
+            self.assertEqual(report["record_count"], 2)
+            frame = next(x for x in records if x.kind == "scan_rgbd_frame")
+            self.assertEqual(frame.data["depth_scale_to_m"], .001)
+            self.assertTrue(frame.data["pose_member"].endswith(".pose.txt"))
+
+    def test_ros_image_codecs_preserve_uint16_and_bgr8(self):
+        from spatialmind.datasets.rosbag_export import image_to_pillow
+        from types import SimpleNamespace
+        def message(encoding, data, step):
+            return SimpleNamespace(width=2, height=1, encoding=encoding,
+                                   data=data, step=step, is_bigendian=0)
+        rgb = image_to_pillow(message("bgr8", bytes([200, 10, 5, 0, 5, 180]), 6),
+                              color=True)
+        self.assertEqual(rgb.getpixel((0, 0)), (5, 10, 200))
+        depth = image_to_pillow(message("16UC1", bytes([0x88, 0x13, 0x10, 0x27]), 4),
+                                color=False)
+        self.assertEqual(list(depth.getdata()), [5000, 10000])
+
+    def test_batch_pipeline_reports_missing_not_fake_success(self):
+        from scripts.run_data_pipeline import run
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            config = root/"config.json"
+            config.write_text(json.dumps({
+                "output_root": "out", "sources": {
+                    "hm3d": {"path": "missing-hm3d"},
+                    "goat": {"path": "missing-goat"},
+                }
+            }), encoding="utf-8")
+            status = run(config, selected={"hm3d", "goat"})
+            self.assertEqual(status["sources"]["goat"]["status"], "missing_local_data")
+            self.assertEqual(status["sources"]["hm3d"]["status"], "missing_local_data")
+            with self.assertRaises(SystemExit):
+                run(config, selected={"hm3d", "goat"}, fail_on_missing=True)
+
+
 if __name__ == "__main__":
     unittest.main()
