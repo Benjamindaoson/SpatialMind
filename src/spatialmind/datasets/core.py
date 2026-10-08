@@ -14,7 +14,7 @@ SCHEMA_VERSION = "spatialmind-dataset-v1"
 
 def safe_input_file(root: Path, filename: str) -> Path:
     """Reject absolute paths, parent traversals and symlink exits."""
-    if not isinstance(filename, str) or not filename or "\\x00" in filename:
+    if not isinstance(filename, str) or not filename or "\x00" in filename:
         raise ValueError("Invalid file reference")
     requested = Path(filename)
     if requested.is_absolute() or ".." in requested.parts:
@@ -101,7 +101,7 @@ def prepare_dataset(
         for record in records:
             if record.dataset != name:
                 raise ValueError("Adapter dataset mismatch")
-            serialized = json.dumps(record.to_dict(), ensure_ascii=False, sort_keys=True) + "\\n"
+            serialized = json.dumps(record.to_dict(), ensure_ascii=False, sort_keys=True) + "\n"
             if record.kind.startswith("oracle_"):
                 evaluator.write(serialized)
                 oracle_count += 1
