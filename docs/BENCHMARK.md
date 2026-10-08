@@ -24,6 +24,7 @@ Current deterministic scenarios:
 |---|---|---|
 | find_toolbox | none | find blue toolbox |
 | moved_toolbox | store memory then move toolbox to office | find blue toolbox |
+| memory_hint_toolbox | a separate sensor observation confirms toolbox in office | find blue toolbox from distant initial pose |
 | occluded_toolbox | move toolbox and insert local obstacle | find blue toolbox |
 | blocked_corridor | obstruct the east crossing | navigate to meeting room |
 | find_first_aid | different target class and location | find red first aid kit |
