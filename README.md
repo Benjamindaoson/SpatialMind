@@ -15,6 +15,8 @@
 
 **[Six-stage Delivery & Evidence Report](docs/DELIVERY_REPORT.md)** · **[ROS2/Gazebo Runbook](docs/ROS2_GAZEBO.md)** · **[Physical Benchmark Protocol](docs/PHYSICAL_EVALUATION.md)**
 
+**[Six-source Data Pipeline](docs/DATASETS.md)** — TUM RGB-D, OpenLORIS, 3RScan, ReplicaCAD, HM3D/ObjectNav and GOAT-Bench adapters with separated evaluation truth and offline replay.
+
 **[Flagship Implementation Plan](docs/IMPLEMENTATION_PLAN.md)** — prioritized ROS2, perception, long-horizon execution, evaluation, and acceptance gates.
 
 </div>
@@ -95,6 +97,25 @@ Most LLM tool demos assume that tool outputs are complete and that the world sta
 | ROS 2 navigation | **Adapter only** | Nav2 NavigateToPose action and /amcl_pose subscriber |
 | Gazebo RGB-D / semantic mapping | **Not implemented** | Requires sensor bridge, 3D perception and semantic map alignment |
 | Real robot safety validation | **Not performed** | Hardware e-stop, watchdogs and collision layer required |
+
+## Six Public Dataset Adapters
+
+The [data integration guide](docs/DATASETS.md) provides licensing and acquisition instructions, input formats and reproducible commands. Source formats now have distinct parsers for:
+
+- **TUM RGB-D / OpenLORIS:** timestamp-synchronized RGB-D indexes, camera/pose metadata, and optional Pillow-backed image/depth replay into offline spatial beliefs.
+- **3RScan:** reference/rescan relationships, semantic scan annotations and temporal object-change ground truth.
+- **ReplicaCAD / HM3D:** native Habitat scene asset indexing; HM3D ObjectNav Episode catalog.
+- **GOAT-Bench:** sequential language/category/image-goal episodes for Habitat, with oracle goal answers excluded from policy-facing records.
+
+~~~bash
+pip install -e ".[datasets]"
+spatialmind data sources
+python scripts/run_data_pipeline.py --config configs/datasets.example.json
+spatialmind data prepare --dataset tum --source data/tum/rgbd_dataset_freiburg1_xyz --output artifacts/datasets/tum
+spatialmind data replay --manifest artifacts/datasets/tum/manifest.json --camera configs/cameras/tum_fr1.json --output artifacts/datasets/tum/replay
+~~~
+
+**Important:** Dataset ingestion code is implemented and tested on synthetic fixtures; downloading third-party raw files requires authorized dataset access. The project does not redistribute any dataset or claim a real-data benchmark without actual execution. HM3D and some 3RScan/GOAT assets have access or non-commercial conditions. Offline RGB-D camera replay is not robot action policy evaluation.
 
 ## ⚡ Quick Start
 
