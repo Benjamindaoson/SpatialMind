@@ -30,7 +30,7 @@ jobs:
       - name: Generate aligned Gazebo world and semantic assets (static check only)
         run: python scripts/generate_gazebo_scene.py --out /tmp/spatialmind-gazebo-assets
       - name: Run metric physical-agent intervention comparisons
-        run: spatialmind physical-benchmark --seeds 3 --output-dir /tmp/spatialmind-physical-benchmark --trace
+        run: spatialmind physical-benchmark --seeds 12 --output-dir /tmp/spatialmind-physical-benchmark --trace
       - name: Build non-root mission-control Docker image
         run: docker build --tag spatialmind-ci .
       - name: Smoke-test containerized API
