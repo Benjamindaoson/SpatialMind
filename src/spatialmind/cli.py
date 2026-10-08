@@ -27,6 +27,10 @@ def main() -> None:
     bench.add_argument("--output", default="artifacts/benchmark.json")
     bench.add_argument("--seeds", type=int, default=1, help="Number of independent deterministic seeds")
     bench.add_argument("--trace-dir", default=None, help="Save event logs for every trial")
+    metric = commands.add_parser("physical-benchmark", help="Paired metric-robot interventions")
+    metric.add_argument("--seeds", type=int, default=3)
+    metric.add_argument("--output-dir", default="artifacts/metric-benchmark")
+    metric.add_argument("--trace", action="store_true")
     report = commands.add_parser("trace", help="Inspect a task's event stream")
     report.add_argument("task_id")
     report.add_argument("--data-dir", default=".spatialmind")
@@ -34,6 +38,11 @@ def main() -> None:
 
     if args.command == "benchmark":
         print(json.dumps(run_suite(output=args.output, seeds=args.seeds, trace_dir=args.trace_dir), indent=2))
+        return
+    if args.command == "physical-benchmark":
+        from spatialmind.physical_benchmark import run_physical_benchmark
+        print(json.dumps(run_physical_benchmark(seeds=args.seeds,
+                         output_dir=args.output_dir, trace=args.trace), indent=2))
         return
 
     interpreter = None
