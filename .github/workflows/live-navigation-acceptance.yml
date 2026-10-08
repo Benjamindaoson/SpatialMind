@@ -2,6 +2,10 @@ name: Gazebo Live Navigation Acceptance
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/live-navigation-acceptance.yml'
+      - 'scripts/verify_live_navigation.py'
 
 permissions:
   contents: read
