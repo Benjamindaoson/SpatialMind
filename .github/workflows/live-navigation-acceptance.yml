@@ -37,8 +37,9 @@ jobs:
       - name: Run actual Nav2 action and AMCL motion verification
         shell: bash
         run: |
-          set -euo pipefail
+          set -eo pipefail
           source /opt/ros/jazzy/setup.bash
+          set -u
           bash scripts/bringup_spatialmind.sh > /tmp/spatialmind-gazebo-live.log 2>&1 &
           sim_pid=$!
           trap 'kill "$sim_pid" 2>/dev/null || true' EXIT
