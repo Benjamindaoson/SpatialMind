@@ -117,7 +117,7 @@ def scan_records(root: Path, *, limit: int = 1000) -> Iterator[DatasetRecord]:
         with ZipFile(sequence_zip) as archive:
             entries = set(archive.namelist())
             for rgb in sorted(entries):
-                match = re.search(r"(frame-[0-9]+)\\.color\\.jpg$", rgb)
+                match = re.search(r"(frame-[0-9]+)\.color\.jpg$", rgb)
                 if not match or rgb.startswith("/") or ".." in rgb.split("/"):
                     continue
                 stem = rgb[:-len(".color.jpg")]
