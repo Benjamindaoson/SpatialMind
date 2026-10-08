@@ -180,6 +180,7 @@ Keep the instruction fixed and change the environment. Then inspect whether the 
 |---|---|---|
 | find_toolbox | Baseline visible object | Conclude only after positive observation |
 | moved_toolbox | Store old location; move object to office | Do not trust historical location; reacquire target |
+| memory_hint_toolbox | Prior independent robot observation places target in office | Use valid remote memory to reduce unnecessary exploration |
 | occluded_toolbox | Move target and add nearby occluder | Avoid false absence conclusions; continue search |
 | blocked_corridor | Block east crossing; navigate to meeting room | Recognize obstruction and take a reachable alternate route |
 | find_first_aid | Target is in another semantic room | Select viewpoints to find a different object category |
