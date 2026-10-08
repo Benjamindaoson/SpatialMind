@@ -48,7 +48,7 @@ class SequentialPlanner(ActiveSearchPlanner):
 
 def run_trial(scenario: str, policy: str = "full") -> Trial:
     if scenario not in {"find_toolbox", "moved_toolbox", "occluded_toolbox",
-                        "blocked_corridor", "find_first_aid"}:
+                        "blocked_corridor", "find_first_aid", "memory_hint_toolbox"}:
         raise ValueError(f"Unknown scenario: {scenario}")
     if policy not in {"full", "no_memory", "uniform_search"}:
         raise ValueError(f"Unknown policy: {policy}")
@@ -62,7 +62,11 @@ def run_trial(scenario: str, policy: str = "full") -> Trial:
         runtime = AgentRuntime(robot, world, memory, events)
         if policy == "uniform_search":
             runtime.planner = SequentialPlanner(world)
-        if scenario == "moved_toolbox":
+        if scenario == "memory_hint_toolbox":
+            # A prior real sensor observation, but out of the current robot\'s view.
+            world.move_object("toolbox_1", Point(16, 9))
+            memory.update(SimRobot(world, pose=Point(16, 9)).observe())
+        elif scenario == "moved_toolbox":
             # Historical sighting is retained while the object moves.
             memory.update(robot.observe())
             world.move_object("toolbox_1", Point(16, 9))
@@ -95,7 +99,7 @@ def run_suite(
 ) -> dict[str, Any]:
     scenarios = scenarios or [
         "find_toolbox", "moved_toolbox", "occluded_toolbox",
-        "blocked_corridor", "find_first_aid",
+        "blocked_corridor", "find_first_aid", "memory_hint_toolbox",
     ]
     policies = policies or ["full", "no_memory", "uniform_search"]
     trials = [run_trial(s, p) for p in policies for s in scenarios]
