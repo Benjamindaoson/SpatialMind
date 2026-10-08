@@ -1,0 +1,18 @@
+{
+  "schema": "spatialmind-data-pipeline-v1",
+  "output_root": "artifacts/datasets",
+  "max_records_per_source": 1000,
+  "sources": {
+    "tum": {"path": "data/tum/rgbd_dataset_freiburg1_xyz", "calibration": "configs/cameras/tum_fr1.json"},
+    "openloris": {"path": "data/openloris/office1-1", "calibration": null,
+      "note": "Export RGB/depth indexes from the original ROS bag; supply aligned calibration and pose frame explicitly"},
+    "3rscan": {"path": "data/3rscan", "calibration": null,
+      "note": "Requires 3RScan.json and permitted scan files"},
+    "replicacad": {"path": "data/replicacad", "calibration": null,
+      "note": "Native Habitat assets; use Habitat for interactive 3D tasks"},
+    "hm3d": {"path": "data/hm3d", "calibration": null,
+      "note": "Subject to Matterport noncommercial academic license"},
+    "goat": {"path": "data/goat", "calibration": null,
+      "note": "Episode annotations; requires separately licensed HM3D scenes"}
+  }
+}

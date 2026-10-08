@@ -1,0 +1,12 @@
+{
+  "source": "TUM RGB-D dataset, Freiburg 1 RGB camera calibration",
+  "documentation": "https://cvg.cit.tum.de/data/datasets/rgbd-dataset/file_formats",
+  "width": 640,
+  "height": 480,
+  "fx": 517.306408,
+  "fy": 516.469215,
+  "cx": 318.643040,
+  "cy": 255.313989,
+  "depth_scale_to_m": 0.0002,
+  "notes": "TUM PNG depth stored as raw/5000. Frame remains camera-world, not robot map."
+}
