@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpatialMind | Mission Control</title>
+<style>
+:root{color-scheme:dark;--bg:#090f1b;--panel:#142136;--line:#2a3b55;--mint:#66e6c6;--ink:#edf5ff;--muted:#98acc9}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% -15%,#2a3e58,#090f1b 60%);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1250px;margin:auto;padding:26px 22px 60px}header{display:flex;align-items:center;justify-content:space-between;margin-bottom:27px}
+.logo{font-size:30px;font-weight:800;letter-spacing:-1.4px}.logo span{color:var(--mint)}.badge{color:var(--mint);border:1px solid #276f61;border-radius:22px;padding:6px 12px;font-size:12px}
+h1{font-size:29px;letter-spacing:-.7px;margin:0 0 7px}h2{font-size:16px;margin:0 0 17px}p{color:var(--muted);margin:0 0 23px}
+.layout{display:grid;grid-template-columns:minmax(340px,1.25fr) minmax(320px,1fr);gap:18px}
+.card{border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,#16243a,#101827);padding:23px;box-shadow:0 20px 50px #0002}.wide{grid-column:1/-1}
+.controls{display:flex;flex-wrap:wrap;gap:9px}button,input{padding:12px;border-radius:9px;font:inherit;border:1px solid var(--line)}
+input{background:#0b1523;color:#fff;flex:1;min-width:170px}button{background:#20344b;color:#fff;cursor:pointer}button.primary{background:var(--mint);color:#082020;border:none;font-weight:800}
+button:disabled{opacity:.6}button:not(:disabled):hover{filter:brightness(1.12)}
+.grid{display:grid;grid-template-columns:repeat(20,1fr);gap:3px}.cell{aspect-ratio:1;display:grid;place-items:center;background:#23354a;border-radius:3px;font-size:11px;font-weight:800}
+.wall{background:#09111d}.robot{background:var(--mint);color:#082020}.object{background:#e9b968;color:#281b0b}.obstacle{background:#bd6a69}
+.legend{margin-top:14px;font-size:12px;color:var(--muted)}.legend b{display:inline-block;width:10px;height:10px;margin:0 6px 0 13px;border-radius:2px;background:var(--mint)}
+.stat{display:inline-block;margin:13px 28px 0 0}.number{font-size:23px;font-weight:800;color:var(--mint)}.muted{color:var(--muted);font-size:12px}
+.entry{padding:11px 0;border-bottom:1px solid #2b3c55}.entry:last-child{border-bottom:0}
+pre{white-space:pre-wrap;word-wrap:break-word;padding:14px;background:#0c1726;border-radius:8px;border:1px solid #283b50;font-size:12px;max-height:320px;overflow:auto}
+footer{color:var(--muted);font-size:12px;margin-top:20px}@media(max-width:780px){.layout{grid-template-columns:1fr}.wide{grid-column:auto}main{padding:18px 12px}}
+</style></head>
+<body><main><header><div class="logo">Spatial<span>Mind</span></div><div class="badge">DETERMINISTIC GRID SIM</div></header>
+<h1>Autonomous Mission Control</h1><p>Memory-grounded navigation, active information search, and traceable robot decisions.</p>
+<div class="layout">
+<section class="card wide"><h2>Issue a mission</h2>
+<div class="controls"><input id="instruction" value="Find the blue toolbox" aria-label="Natural language instruction">
+<button id="run" class="primary">Execute mission</button>
+<button id="move">Move toolbox to office</button><button id="block">Toggle blocked doorway</button><button id="refresh">Refresh</button></div>
+<p id="status" role="status" style="margin:14px 0 0">Ready for a mission.</p></section>
+<section class="card"><h2>Map and robot location</h2><div id="grid" class="grid" aria-label="Known grid map"></div>
+<div class="legend"><b></b> Robot <b style="background:#e9b968"></b> Object <b style="background:#bd6a69"></b> Blocked</div>
+<div class="stat"><div id="pose" class="number">—</div><div class="muted">Robot pose (grid)</div></div>
+<div class="stat"><div id="count" class="number">—</div><div class="muted">Remembered objects</div></div></section>
+<section class="card"><h2>Temporal spatial memory</h2><div id="memory" class="muted">No observations yet.</div></section>
+<section class="card wide"><h2>Evidence-linked agent event stream</h2><pre id="events">No events yet.</pre></section>
+</div><footer>v0.1 research prototype • Grid simulation, not a Gazebo or physical robot validation. ROS2/Nav2 action adapter is provided separately.</footer>
+</main>
+<script>
+const el=id=>document.getElementById(id);
+const enc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let active=false,blocked=false;
+async function req(url,method='GET',body){const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error(data.detail||r.statusText);return data;}
+async function refresh(){
+const s=await req('/api/state');
+el('pose').textContent=s.pose.x+', '+s.pose.y;el('count').textContent=s.memory.length;
+el('grid').innerHTML=s.grid.join('').split('').map(c=>{
+const cls={'#':'wall','R':'robot','T':'object','F':'object','X':'obstacle'}[c]||'free';
+return '<div class="cell '+cls+'" title="'+cls+'">'+(cls==='free'||cls==='wall'?'':c)+'</div>';}).join('');
+el('memory').innerHTML=s.memory.length?s.memory.map(m=>'<div class="entry"><strong>'+enc(m.label)+'</strong><div class="muted">'+enc(m.id)+' — ('+m.position.x+','+m.position.y+') · '+enc(m.status)+' · confidence '+m.confidence.toFixed(2)+' · '+m.sightings+' sightings</div></div>').join(''):'<span class="muted">No observations yet.</span>';
+el('events').textContent=s.events.map(e=>e.id+' · '+e.type+' · '+JSON.stringify(e.data)).join('\n')||'No events yet.';
+}
+async function act(fn){if(active)return;active=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn();await refresh()}catch(e){el('status').textContent='Error: '+e.message}finally{active=false;document.querySelectorAll('button').forEach(b=>b.disabled=false)}}
+el('run').onclick=()=>act(async()=>{el('status').textContent='Executing…';const r=await req('/api/tasks','POST',{instruction:el('instruction').value,max_actions:80});el('status').textContent=r.status.toUpperCase()+' · '+r.reason+' · task '+r.task_id+' · actions '+r.steps+' · replans '+r.replans;});
+el('move').onclick=()=>act(async()=>{await req('/api/world/move/toolbox_1/office','POST');el('status').textContent='Physical object moved; memory intentionally retains its previous belief until re-observed.'});
+el('block').onclick=()=>act(async()=>{blocked=!blocked;await req('/api/world/obstacle','POST',{x:9,y:3,blocked});el('status').textContent=blocked?'East doorway blocked':'East doorway unblocked';});
+el('refresh').onclick=()=>act(async()=>{el('status').textContent='World refreshed'});
+refresh().catch(e=>el('status').textContent=e.message);
+</script></body></html>
