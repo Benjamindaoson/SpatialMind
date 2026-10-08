@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520" role="img" aria-labelledby="title desc">
+<title id="title">Interventional spatial memory experiment</title><desc id="desc">Object observed, then moved behind the robot's old observation location; agent invalidates stale memory, searches and verifies new location.</desc>
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0D1828"/><stop offset="1" stop-color="#1B344B"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0 L9 4 L0 8Z" fill="#66D5BD"/></marker>
+<style>.title{font:700 29px system-ui;fill:#F3F9FF}.step{font:600 22px system-ui;fill:#E4F5FF}.sub{font:16px system-ui;fill:#B0C7D9}.box{fill:#1A3046;stroke:#496A81;stroke-width:2}.arrow{stroke:#66D5BD;stroke-width:3;marker-end:url(#arrow)}</style></defs>
+<rect width="1400" height="520" rx="27" fill="url(#bg)"/>
+<text x="56" y="62" class="title">Interventional memory verification</text>
+<text x="56" y="98" class="sub">Change the physical world while keeping the mission fixed. Judge the behavior, not a self-reported answer.</text>
+<g transform="translate(43,154)">
+<rect width="290" height="246" rx="20" class="box"/><text x="25" y="47" class="step">01 / Observe</text><text x="25" y="85" class="sub">Blue toolbox at (3, 3)</text>
+<rect x="30" y="121" width="230" height="80" rx="10" fill="#203E53"/><circle cx="81" cy="161" r="23" fill="#65D9BC"/>
+<rect x="169" y="140" width="40" height="38" rx="6" fill="#E7B76C"/><text x="25" y="230" class="sub">Store timestamp + evidence</text></g>
+<path d="M342 277 H370" class="arrow"/>
+<g transform="translate(378,154)"><rect width="290" height="246" rx="20" class="box"/><text x="25" y="47" class="step">02 / Intervene</text><text x="25" y="85" class="sub">Move toolbox to office</text>
+<rect x="31" y="121" width="228" height="80" rx="10" fill="#203E53"/><rect x="62" y="140" width="41" height="38" rx="6" fill="none" stroke="#E7B76C" stroke-dasharray="5,5" stroke-width="3"/>
+<path d="M117 160 H169" stroke="#E7B76C" stroke-width="3"/><rect x="177" y="140" width="41" height="38" rx="6" fill="#E7B76C"/>
+<text x="25" y="230" class="sub">Old belief becomes stale</text></g>
+<path d="M676 277 H704" class="arrow"/>
+<g transform="translate(712,154)"><rect width="290" height="246" rx="20" class="box"/><text x="25" y="47" class="step">03 / Replan</text><text x="25" y="85" class="sub">Verify old location</text>
+<rect x="29" y="121" width="232" height="80" rx="10" fill="#203E53"/><circle cx="76" cy="160" r="20" fill="#65D9BC"/>
+<path d="M104 160 L182 160 L159 141 M182 160 L159 179" fill="none" stroke="#F2A078" stroke-width="3"/>
+<text x="25" y="230" class="sub">Invalidate only if visible</text></g>
+<path d="M1010 277 H1038" class="arrow"/>
+<g transform="translate(1046,154)"><rect width="310" height="246" rx="20" fill="#1D493E" stroke="#61CFAF" stroke-width="2"/>
+<text x="25" y="47" class="step">04 / Verify</text><text x="25" y="85" class="sub">Find object at new location</text>
+<rect x="31" y="121" width="247" height="80" rx="10" fill="#234D47"/><circle cx="82" cy="160" r="21" fill="#65D9BC"/>
+<rect x="180" y="140" width="44" height="38" rx="6" fill="#E7B76C"/>
+<text x="25" y="230" class="sub">Link success to observation ID</text></g>
+<text x="56" y="467" class="sub">Evaluated by action logs, observation coverage, task success and navigation cost — not by fabricated simulator screenshots.</text>
+</svg>
