@@ -12,5 +12,19 @@ services:
       - spatialmind-data:/data
     security_opt:
       - no-new-privileges:true
+  physical-lab:
+    image: spatialmind:local
+    build: .
+    init: true
+    restart: unless-stopped
+    command: ["uvicorn", "spatialmind.physical_api:app", "--host", "0.0.0.0", "--port", "8001"]
+    ports:
+      - "127.0.0.1:8001:8001"
+    environment:
+      SPATIALMIND_DATA_DIR: /data
+    volumes:
+      - spatialmind-data:/data
+    security_opt:
+      - no-new-privileges:true
 volumes:
   spatialmind-data:
