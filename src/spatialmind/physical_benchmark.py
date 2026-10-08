@@ -186,6 +186,55 @@ async def _trial(scenario,policy,seed,trace_dir=None):
             memory.close()
 
 
+def paired_bootstrap_deltas(
+    trials: list[Trial], *, baseline: str, repeats: int = 1500, seed: int = 71,
+) -> dict:
+    """Positive distance delta means Full took fewer meters than baseline.
+
+    Pair by identical scenario, seed and layout. Bootstrap task pairs with
+    replacement; do not mistake synthetic CI for a real-world CI.
+    """
+    if baseline not in POLICIES or baseline == "full" or repeats < 100:
+        raise ValueError("Invalid comparison baseline or bootstrap size")
+    keyed={(t.scenario,t.seed,t.layout_id,t.policy):t for t in trials}
+    pairs=[]
+    for trial in trials:
+        if trial.policy!="full":
+            continue
+        ref=keyed[(trial.scenario,trial.seed,trial.layout_id,baseline)]
+        pairs.append((
+            ref.navigated_m-trial.navigated_m,
+            int(trial.success)-int(ref.success),
+        ))
+    if not pairs:
+        raise ValueError("No paired tasks")
+    rng=random.Random(seed)
+    sample_means=[]
+    success_means=[]
+    n=len(pairs)
+    for _ in range(repeats):
+        sample=[pairs[rng.randrange(n)] for __ in range(n)]
+        sample_means.append(sum(a for a,_ in sample)/n)
+        success_means.append(sum(b for _,b in sample)/n)
+    sample_means.sort()
+    success_means.sort()
+    return {
+        "baseline":baseline, "n_pairs":n,
+        "distance_saved_m_positive_is_better":round(
+            sum(a for a,_ in pairs)/n,3),
+        "distance_delta_95ci": [
+            round(sample_means[int(.025*(repeats-1))],3),
+            round(sample_means[int(.975*(repeats-1))],3),
+        ],
+        "success_delta":round(sum(b for _,b in pairs)/n,4),
+        "success_delta_95ci":[
+            round(success_means[int(.025*(repeats-1))],4),
+            round(success_means[int(.975*(repeats-1))],4),
+        ],
+        "method":"seeded paired bootstrap over synthetic interventions",
+    }
+
+
 def run_physical_benchmark(
     *,seeds:int=3,output_dir:str="artifacts/metric-benchmark",
     trace:bool=False,
@@ -243,6 +292,10 @@ def run_physical_benchmark(
         "seeds":seeds,"unique_topologies":min(seeds,4),
         "scenarios":list(SCENARIOS),"policies":list(POLICIES),
         "trial_count":len(trials),"aggregate":groups,"by_scenario":paired,
+        "paired_baseline_deltas":{
+            baseline:paired_bootstrap_deltas(trials,baseline=baseline)
+            for baseline in POLICIES if baseline!="full"
+        },
     }
     (out/"metrics.json").write_text(json.dumps(report,indent=2),encoding="utf-8")
     _report_svg(groups,out/"comparison.svg")
