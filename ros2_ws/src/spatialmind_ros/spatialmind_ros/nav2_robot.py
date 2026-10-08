@@ -41,6 +41,7 @@ class Nav2MetricRobot:
         self._odom_distance_m=0.0
         self._odom_count=0
         self._last_nav_finished=0.0
+        self._last_consumed_obs_at=0.0
         self._observations=[]
         self._observation_lock=threading.Lock()
         self.node.create_subscription(PoseWithCovarianceStamped,
@@ -178,8 +179,10 @@ class Nav2MetricRobot:
             if observations:
                 at,obs=observations[-1]
                 if (at>=self._last_nav_finished
+                        and at>self._last_consumed_obs_at
                         and time.monotonic()-at<self.timeout_s
                         and obs.pose.distance(self.pose)<0.75):
+                    self._last_consumed_obs_at=at
                     return obs
             await asyncio.sleep(.05)
         raise TimeoutError("RGB-D perception stream not available or stale")
