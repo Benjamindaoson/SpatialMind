@@ -17,6 +17,7 @@ dependencies = []
 api = ["fastapi>=0.110", "uvicorn>=0.27"]
 dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.27"]
 datasets = ["Pillow>=10,<13"]
+datasets-rosbag = ["Pillow>=10,<13", "rosbags>=0.10"]
 
 [project.scripts]
 spatialmind = "spatialmind.cli:main"
