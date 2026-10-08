@@ -14,11 +14,19 @@ This delivery implemented software modules across **all six planned workstreams*
 | Stage | Committed work | Validation | Remaining physical evidence |
 |---|---|---|---|
 | G0 — architecture | Metric frame/time/covariance contract, async Robot protocol, RoomMap, task actor with single-active-mission guard | Automated frame tests, navigation mocks, interruption and resume tests | Live TF and AMCL / Nav2 endpoint verification |
-| G1 — Gazebo + Nav2 | Generated SDF world, aligned occupancy map and semantic waypoints, RGB-D robot SDF injector, ament package, Nav2 action client and Gazebo launch scripts | Static SDF/map generation tests and dedicated ROS integration CI | Actual robot movement in headless Gazebo, Nav2 goal result, video/rosbag |
+| G1 — Gazebo + Nav2 | Generated SDF world, aligned occupancy map and semantic waypoints, RGB-D robot SDF injector, ament package, Nav2 action client and Gazebo launch scripts | Core CI geometry tests; **ROS2 Jazzy colcon build, Gazebo SDF parse and Nav2 action-server headless startup passed** ([run 37784627902](https://github.com/Benjamindaoson/SpatialMind/actions/runs/37784627902)) | Actual robot movement in headless Gazebo, Nav2 goal result, video/rosbag |
 | G2 — vision + spatial memory | RGB8/BGR8, 16-bit/float depth decoding, synced CameraInfo + TF2 projection, color-region segmentation, conservative FOV-based negative evidence, metric temporal belief store | Pure-Python pixel/depth/calibration and memory tests | Actual Gazebo RGB-D topics, optical TF calibration, robust real-world detector/tracker |
 | G3 — long-horizon agent | Async mission, revise/cancel, bounded retry, failure events, sensor-grounded goal completion, checkpoint persisted and restored with frame/map checks | Software tests for revisions/cancel/recovery/no-camera navigation | Real Nav2 preemption, autonomous search under live visual observations |
 | G4 — strong ablations | 7 intervention families, 4 policies, 4 static topology variants, metric distances, independent post-hoc oracle, seeded paired bootstrap, SVG/CSV/JSON/trace exports, Gazebo set_pose intervention helper | CI synthetic metric-sim runs and regression tests | >=200 distinct real Gazebo/real-robot trials with reproducible paired results |
 | G5 — MLOps | LLM call/token budgets, event-based triggering, cache invalidation, latency/RSS measurement, disk quota helper, rosbag recording, local Docker apps and CI | Core CI and Docker API smoke tests | Real model inference/quantization benchmark, platform safety sign-off, real VRAM and latency measurements |
+
+## Verified metrics and current results
+
+- [Core CI run 37784917085](https://github.com/Benjamindaoson/SpatialMind/actions/runs/37784917085): **49 tests passed**, 12 seed × 7 interventions × 4 policies = **336 synthetic metric tasks** executed.
+- Full vs No-Memory: 81/84 versus 78/84 correct missions, but Full uses **20.869 m versus 20.619 m** mean synthetic distance (slightly worse distance).
+- Nearest Search: 82/84 correct, 19.167 m mean simulated distance, outperforming Full; this result is documented rather than hidden.
+- Complete paired outcomes and 95% intervals: [METRIC_BENCHMARK_RESULTS.md](METRIC_BENCHMARK_RESULTS.md).
+- ROS Jazzy + Gazebo check: [run 37784627902](https://github.com/Benjamindaoson/SpatialMind/actions/runs/37784627902) **passed** ROS package build, SDF parsing and headless action-server startup, but did not yet verify a physical search task.
 
 ## Current reproducible commands
 
