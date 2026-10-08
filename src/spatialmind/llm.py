@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from spatialmind.language import ClarificationNeeded, OBJECT_ALIASES, ROOM_ALIASES
+from spatialmind.governance import InferenceGovernor
 from spatialmind.models import TaskRequest
 
 Transport = Callable[[dict[str, Any]], dict[str, Any]]
@@ -36,6 +37,7 @@ class OpenAICompatibleInterpreter:
         self, *, model: str, base_url: str = "https://api.openai.com/v1",
         api_key: str | None = None, timeout: float = 25.0,
         transport: Transport | None = None,
+        governor: InferenceGovernor | None = None,
     ) -> None:
         if not model:
             raise ValueError("model is required")
@@ -48,6 +50,7 @@ class OpenAICompatibleInterpreter:
         self.model, self.base_url = model, base_url
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY", "")
         self.timeout, self.transport = timeout, transport
+        self.governor = governor or InferenceGovernor()
         self.last_metadata: dict[str, Any] = {}
 
     def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -74,6 +77,8 @@ class OpenAICompatibleInterpreter:
     def parse(self, instruction: str) -> TaskRequest:
         if not instruction.strip():
             raise ClarificationNeeded("Please provide a task instruction.")
+        if not self.governor.permit("task_created"):
+            raise ClarificationNeeded("Model inference budget exhausted.")
         payload = {
             "model": self.model, "temperature": 0,
             "response_format": {"type": "json_object"},
@@ -86,9 +91,16 @@ class OpenAICompatibleInterpreter:
         start = time.perf_counter()
         response = self.transport(payload) if self.transport else self._request(payload)
         duration_ms = round(1000 * (time.perf_counter() - start), 2)
+        usage = response.get("usage") or {}
+        self.governor.record(
+            model_id=self.model, trigger="task_created", latency_ms=duration_ms,
+            prompt_tokens=int(usage.get("prompt_tokens", 0)),
+            completion_tokens=int(usage.get("completion_tokens", 0)),
+            result={"received_response": True},
+        )
         self.last_metadata = {
             "model": self.model, "latency_ms": duration_ms,
-            "usage": response.get("usage", {}),
+            "usage": usage, "budget": self.governor.metrics(),
         }
         try:
             content = response["choices"][0]["message"]["content"]
