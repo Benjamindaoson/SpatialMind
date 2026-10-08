@@ -167,3 +167,92 @@ def detect_color_regions(
                 detections.append(BoundingBox(min(xs),min(ys),
                                               max(xs)+1,max(ys)+1,label,0.9))
     return detections
+
+
+def rotate_xyz(
+    vector: tuple[float, float, float],
+    quaternion: tuple[float, float, float, float],
+) -> tuple[float, float, float]:
+    """Apply normalized xyzw quaternion to an optical-frame vector."""
+    x,y,z,w=quaternion
+    norm=math.sqrt(x*x+y*y+z*z+w*w)
+    if norm<1e-12:
+        raise ValueError("Invalid camera quaternion")
+    x,y,z,w=x/norm,y/norm,z/norm,w/norm
+    vx,vy,vz=vector
+    # Quaternion rotation: v + w*(2 q cross v) + q cross (2 q cross v).
+    tx,ty,tz=2*(y*vz-z*vy),2*(z*vx-x*vz),2*(x*vy-y*vx)
+    return (
+        vx+w*tx+(y*tz-z*ty),
+        vy+w*ty+(z*tx-x*tz),
+        vz+w*tz+(x*ty-y*tx),
+    )
+
+
+def project_optical_bbox(
+    box: BoundingBox, depths: list[float], camera: CameraModel,
+    translation_xyz: tuple[float, float, float],
+    quaternion_xyzw: tuple[float, float, float, float],
+    *, stamp: float, map_frame: str = "map",
+    evidence_ref: str | None = None,
+) -> ObjectEstimate | None:
+    """Perspective projection through full TF3D camera-to-map transform."""
+    if len(depths)!=camera.width*camera.height:
+        raise ValueError("Depth shape mismatch")
+    x0,y0=max(0,box.x0),max(0,box.y0)
+    x1,y1=min(camera.width,box.x1),min(camera.height,box.y1)
+    if x1<=x0 or y1<=y0:
+        return None
+    pixel_values=[]
+    for v in range(y0+(y1-y0)//4,max(y0+(y1-y0)//4+1,y1-(y1-y0)//4)):
+        for u in range(x0+(x1-x0)//4,max(x0+(x1-x0)//4+1,x1-(x1-x0)//4)):
+            depth=depths[v*camera.width+u]
+            if math.isfinite(depth) and .05<depth<10:
+                pixel_values.append(depth)
+    if len(pixel_values)<2:
+        return None
+    z=statistics.median(pixel_values)
+    u=(x0+x1-1)/2
+    v=(y0+y1-1)/2
+    point_cam=((u-camera.cx)*z/camera.fx,(v-camera.cy)*z/camera.fy,z)
+    transformed=rotate_xyz(point_cam,quaternion_xyzw)
+    spread=statistics.pvariance(pixel_values)
+    estimate=Pose2D(
+        translation_xyz[0]+transformed[0],
+        translation_xyz[1]+transformed[1],
+        frame_id=map_frame,stamp=stamp,
+        position_variance=max(.0025,spread),
+    )
+    return ObjectEstimate(box.label,estimate,box.confidence,evidence_ref=evidence_ref)
+
+
+def visible_optical_depth_cells(
+    depths: list[float], camera: CameraModel,
+    translation_xyz: tuple[float,float,float],
+    quaternion_xyzw: tuple[float,float,float,float],
+    *, resolution: float = .25, stride: int = 8, max_range_m: float = 5,
+) -> frozenset[tuple[int,int]]:
+    """Conservative map-XY coverage projected from measured horizontal rays.
+
+    The endpoint is excluded because a surface at that depth may occlude
+    the object; full 3D negative-evidence analysis remains future work.
+    """
+    if len(depths)!=camera.width*camera.height or resolution<=0 or stride<1:
+        raise ValueError("Invalid depth/visibility input")
+    cy=max(0,min(camera.height-1,round(camera.cy)))
+    cells=set()
+    for u in range(0,camera.width,stride):
+        depth=depths[cy*camera.width+u]
+        if not math.isfinite(depth) or depth<=.2 or depth>max_range_m:
+            continue
+        point_dir=rotate_xyz(((u-camera.cx)/camera.fx,
+                              (cy-camera.cy)/camera.fy,1),quaternion_xyzw)
+        xy_hypot=math.hypot(point_dir[0],point_dir[1])
+        if xy_hypot<.05:
+            continue
+        for n in range(1,max(1,int((depth-.15)/resolution))):
+            alpha=n*resolution
+            x=translation_xyz[0]+alpha*point_dir[0]
+            y=translation_xyz[1]+alpha*point_dir[1]
+            cells.add((round(x/resolution),round(y/resolution)))
+    return frozenset(cells)
