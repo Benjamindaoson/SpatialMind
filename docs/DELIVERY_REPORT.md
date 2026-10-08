@@ -71,6 +71,12 @@ Until those happen, résumé metrics must be described as **grid/metric simulati
 - Experiments must preserve code SHA, environment seed, map version, sensor parameters and raw logs.
 - Security: no API keys in telemetry, and never expose unauthenticated experiment control to public networks.
 
+## Live Gazebo movement gate (new)
+
+The workflow [Gazebo Live Navigation Acceptance](https://github.com/Benjamindaoson/SpatialMind/actions/workflows/live-navigation-acceptance.yml) launches the simulator, sends an actual Nav2 `NavigateToPose` goal, and independently checks `/amcl_pose` for nontrivial movement and final goal proximity. Source: [verify_live_navigation.py](../scripts/verify_live_navigation.py). This is a **fail-closed acceptance gate** separate from ROS2 asset/endpoint smoke tests.
+
+**Status: CI outcome must be checked in GitHub Actions; adding the gate is not evidence that the robot passed it.** It does not validate RGB-D, object finding, camera geometry or real-world safety.
+
 ## High-priority remaining acceptance run
 
 On a compatible Ubuntu 24.04 ROS2 Jazzy + Gazebo Harmonic machine:
