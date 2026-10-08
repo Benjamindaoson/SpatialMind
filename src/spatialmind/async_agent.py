@@ -63,12 +63,14 @@ class AsyncPhysicalAgent:
         self._commands: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
         self._active_id: str | None = None
 
-    async def start(self, mission: Mission, *, task_id: str | None = None) -> str:
+    async def start(self, mission: Mission, *, task_id: str | None = None,
+                    restore: dict | None = None) -> str:
         if self._task is not None and not self._task.done():
             raise RuntimeError("Only one physical motion task may be active")
         self._commands = asyncio.Queue()
         self._active_id = task_id or uuid.uuid4().hex[:12]
-        self._task = asyncio.create_task(self._execute(mission, self._active_id))
+        self._task = asyncio.create_task(
+            self._execute(mission, self._active_id, restore=restore))
         return self._active_id
 
     async def join(self) -> MissionOutcome:
@@ -78,6 +80,29 @@ class AsyncPhysicalAgent:
 
     async def run(self, mission: Mission) -> MissionOutcome:
         await self.start(mission)
+        return await self.join()
+
+    async def resume(self, task_id: str, *, max_actions: int | None = None) -> MissionOutcome:
+        """Resume persisted interrupted/running task after re-grounding the robot.
+
+        Completed task IDs cannot be replayed. The environment/map revision
+        and pose reference frame must match; new observations are mandatory.
+        """
+        from dataclasses import replace
+        state=self.events.load(task_id)
+        if state is None:
+            raise ValueError("Checkpoint missing")
+        if state.get("status") not in {"running","interrupted"}:
+            raise ValueError("Only interrupted/running missions can be resumed")
+        if state.get("map_version")!=self.map.version:
+            raise ValueError("Map version changed: require explicit replanning")
+        previous=state.get("robot_pose",{})
+        if previous.get("frame_id")!=self.robot.pose.frame_id:
+            raise ValueError("Robot localization frame differs from checkpoint")
+        mission=Mission(**state["mission"])
+        if max_actions is not None:
+            mission=replace(mission,max_actions=max_actions)
+        await self.start(mission,task_id=task_id,restore=state)
         return await self.join()
 
     async def revise(self, mission: Mission) -> None:
@@ -101,15 +126,23 @@ class AsyncPhysicalAgent:
             "robot_pose": asdict(self.robot.pose),
         })
 
-    async def _execute(self, mission: Mission, task_id: str) -> MissionOutcome:
+    async def _execute(self, mission: Mission, task_id: str,
+                       restore: dict | None = None) -> MissionOutcome:
         started=time.monotonic()
-        actions=failures=replans=0
-        motion_m=0.0
-        visited:set[str]=set()
+        actions=int(restore.get("actions",0)) if restore else 0
+        failures=int(restore.get("failures",0)) if restore else 0
+        replans=int(restore.get("replans",0)) if restore else 0
+        motion_m=float(restore.get("motion_m",0)) if restore else 0.0
+        visited:set[str]=set(restore.get("visited",[])) if restore else set()
         evidence_ref=None
         status,reason="failed","unknown"
-        self.events.emit(task_id,"mission_created",mission=asdict(mission),
-                         map_version=self.map.version)
+        if restore:
+            self.events.emit(task_id,"mission_resumed",actions=actions,
+                             previous_pose=restore.get("robot_pose"),
+                             current_pose=asdict(self.robot.pose))
+        else:
+            self.events.emit(task_id,"mission_created",mission=asdict(mission),
+                             map_version=self.map.version)
         self._checkpoint(task_id,mission,visited=visited,actions=actions,
                          failures=failures,replans=replans,motion_m=motion_m)
         try:
