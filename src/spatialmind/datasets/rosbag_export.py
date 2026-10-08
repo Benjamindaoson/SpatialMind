@@ -29,8 +29,10 @@ def image_to_pillow(msg, *, color: bool):
                                "RGB" if encoding == "rgb8" else "BGR", step, 1)
     if encoding not in ("16uc1", "mono16"):
         raise ValueError("Depth topic must be uncompressed 16UC1/mono16")
-    bit_order = "I;16B" if bool(msg.is_bigendian) else "I;16L"
-    return Image.frombytes("I;16", (width, height), raw, "raw", bit_order, step, 1)
+    # Pillow does not accept I;16L as a raw decoder for mode I;16 in all
+    # versions. Select the native mode and matching decoder explicitly.
+    bit_order = "I;16B" if bool(msg.is_bigendian) else "I;16"
+    return Image.frombytes(bit_order, (width, height), raw, "raw", bit_order, step, 1)
 
 
 @dataclass
