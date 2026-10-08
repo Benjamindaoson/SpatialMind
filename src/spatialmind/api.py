@@ -22,7 +22,17 @@ class ObstacleBody(BaseModel):
     blocked: bool = True
 
 app = FastAPI(title="SpatialMind Mission Control", version="0.1.0")
-runtime, world = open_runtime(data_dir=Path(os.getenv("SPATIALMIND_DATA_DIR", ".spatialmind")))
+interpreter = None
+if os.getenv("SPATIALMIND_LLM_MODEL"):
+    from spatialmind.llm import OpenAICompatibleInterpreter
+    interpreter = OpenAICompatibleInterpreter(
+        model=os.environ["SPATIALMIND_LLM_MODEL"],
+        base_url=os.getenv("SPATIALMIND_LLM_BASE_URL", "https://api.openai.com/v1"),
+    )
+runtime, world = open_runtime(
+    data_dir=Path(os.getenv("SPATIALMIND_DATA_DIR", ".spatialmind")),
+    interpreter=interpreter,
+)
 last_task_id: str | None = None
 
 @app.get("/", response_class=HTMLResponse)
