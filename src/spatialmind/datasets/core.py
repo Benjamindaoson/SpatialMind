@@ -93,17 +93,30 @@ def prepare_dataset(
     else:
         raise ValueError(name)
     records_file = output / "records.jsonl"
-    total, counts = 0, {}
-    with records_file.open("w", encoding="utf-8") as f:
+    oracle_file = output / "oracle.jsonl"
+    total, oracle_count, counts = 0, 0, {}
+    with records_file.open("w", encoding="utf-8") as policy, oracle_file.open(
+        "w", encoding="utf-8"
+    ) as evaluator:
         for record in records:
             if record.dataset != name:
                 raise ValueError("Adapter dataset mismatch")
-            f.write(json.dumps(record.to_dict(), ensure_ascii=False, sort_keys=True) + "\n")
-            total += 1
-            counts[record.kind] = counts.get(record.kind, 0) + 1
+            serialized = json.dumps(record.to_dict(), ensure_ascii=False, sort_keys=True) + "\\n"
+            if record.kind.startswith("oracle_"):
+                evaluator.write(serialized)
+                oracle_count += 1
+            else:
+                if total >= limit:
+                    break
+                policy.write(serialized)
+                total += 1
+                counts[record.kind] = counts.get(record.kind, 0) + 1
     if not total:
         records_file.unlink(missing_ok=True)
+        oracle_file.unlink(missing_ok=True)
         raise ValueError(f"No usable {name} data in {source}. Check expected file layout.")
+    if not oracle_count:
+        oracle_file.unlink(missing_ok=True)
     manifest = {
         "schema": SCHEMA_VERSION,
         "dataset": name,
@@ -112,6 +125,9 @@ def prepare_dataset(
         "source_root": str(source),
         "records_path": str(records_file.resolve()),
         "record_count": total,
+        "oracle_count": oracle_count,
+        "oracle_path": str(oracle_file.resolve()) if oracle_count else None,
+        "oracle_sha256": sha256_file(oracle_file) if oracle_count else None,
         "record_kinds": counts,
         "records_sha256": sha256_file(records_file),
         "limit": limit,
