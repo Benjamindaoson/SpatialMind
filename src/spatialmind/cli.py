@@ -15,6 +15,8 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     demo = commands.add_parser("demo", help="Execute a grounded mobile robot task")
     demo.add_argument("--instruction", default="Find the blue toolbox")
+    demo.add_argument("--llm-model", default=None, help="Opt-in OpenAI-compatible model")
+    demo.add_argument("--llm-base-url", default="https://api.openai.com/v1")
     demo.add_argument("--data-dir", default=".spatialmind")
     demo.add_argument("--max-actions", type=int, default=80)
     demo.add_argument("--resume", help="Resume an existing task id")
@@ -32,7 +34,13 @@ def main() -> None:
         print(json.dumps(run_suite(output=args.output), indent=2))
         return
 
-    runtime, world = open_runtime(data_dir=args.data_dir)
+    interpreter = None
+    if args.command == "demo" and args.llm_model:
+        from spatialmind.llm import OpenAICompatibleInterpreter
+        interpreter = OpenAICompatibleInterpreter(
+            model=args.llm_model, base_url=args.llm_base_url,
+        )
+    runtime, world = open_runtime(data_dir=args.data_dir, interpreter=interpreter)
     if args.command == "trace":
         print(json.dumps(runtime.events.events(args.task_id), indent=2))
         return
