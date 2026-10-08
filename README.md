@@ -13,6 +13,8 @@
 
 **[Quick Start](#-quick-start)** · **[Architecture](#-system-architecture)** · **[Experiments](#-intervention-benchmark)** · **[Mission Control](#-mission-control)** · **[ROS 2 Integration](#-ros-2--nav2-integration)** · **[中文说明](#-中文说明)**
 
+**[Flagship Implementation Plan](docs/IMPLEMENTATION_PLAN.md)** — prioritized ROS2, perception, long-horizon execution, evaluation, and acceptance gates.
+
 </div>
 
 ![SpatialMind architecture](docs/images/architecture.svg)
