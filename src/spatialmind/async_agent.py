@@ -184,13 +184,38 @@ class AsyncPhysicalAgent:
                           and d.confidence>=self.min_detection_confidence
                           and (mission.room is None or self.map.room_for(d.pose)==mission.room)]
                 if verified:
-                    status,reason="succeeded","sensor_verified"
-                    evidence_ref=verified[0].evidence_ref
-                    if not evidence_ref:
-                        # Explicit sensor event reference; not a claimed source image.
-                        evidence_ref=f"obs:{task_id}:{actions}"
-                    self.events.emit(task_id,"goal_verified",evidence_ref=evidence_ref)
-                    break
+                    first=verified[0]
+                    self.events.emit(task_id,"verification_requested",
+                                     target=mission.target,first_pose=asdict(first.pose),
+                                     initial_evidence=first.evidence_ref)
+                    # Confirm with an independent, subsequent sensor frame.
+                    # A single synthetic/hardware false positive is not sufficient.
+                    try:
+                        confirmation=await self.robot.observe()
+                    except TimeoutError:
+                        confirmation=None
+                    matching=(
+                        [d for d in confirmation.detections
+                         if d.label==mission.target
+                         and d.confidence>=self.min_detection_confidence
+                         and d.pose.frame_id==first.pose.frame_id
+                         and d.pose.distance(first.pose)<=0.75
+                         and confirmation.pose.stamp>=obs.pose.stamp
+                         and (not first.evidence_ref or d.evidence_ref!=first.evidence_ref)]
+                        if confirmation is not None else []
+                    )
+                    if matching:
+                        self.memory.update(confirmation)
+                        status,reason="succeeded","independent_sensor_confirmed"
+                        evidence_ref=matching[0].evidence_ref or f"obs:{task_id}:{actions}:confirmed"
+                        self.events.emit(task_id,"goal_verified",
+                                         initial_evidence=first.evidence_ref,
+                                         confirmation_evidence=evidence_ref,
+                                         target_pose=asdict(matching[0].pose))
+                        break
+                    self.events.emit(task_id,"verification_rejected",
+                                     cause="independent_observation_not_corroborrated",
+                                     first_evidence=first.evidence_ref)
                 goal,source=self._choose(mission,visited)
                 if goal is None:
                     status,reason="failed","exhausted_search_space"
