@@ -7,11 +7,6 @@ on:
       - '.github/workflows/live-navigation-acceptance.yml'
       - 'scripts/verify_live_navigation.py'
       - 'scripts/bringup_spatialmind.sh'
-  push:
-    paths:
-      - '.github/workflows/live-navigation-acceptance.yml'
-      - 'scripts/verify_live_navigation.py'
-
 permissions:
   contents: read
 
