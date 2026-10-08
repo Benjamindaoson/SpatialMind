@@ -48,6 +48,8 @@ Most LLM tool demos assume that tool outputs are complete and that the world sta
 | Structured event log | Implemented | Navigation goals/results, observation, memory update, plan, conclusion |
 | Ablation benchmark | Implemented, small deterministic suite | Full / no-memory / uniform-search reference policies |
 | Mission-control dashboard | Implemented (optional FastAPI) | Live grid, last mission trace and remembered objects |
+| Multi-turn clarification | Implemented, session-level | Clarify unsupported targets and ground the next user turn |
+| Optional LLM intent grounding | Implemented, opt-in | OpenAI-compatible JSON response with strict target validation and token/latency trace |
 | ROS 2 navigation | **Adapter only** | Nav2 NavigateToPose action and /amcl_pose subscriber |
 | Gazebo RGB-D / semantic mapping | **Not implemented** | Requires sensor bridge, 3D perception and semantic map alignment |
 | Real robot safety validation | **Not performed** | Hardware e-stop, watchdogs and collision layer required |
@@ -88,6 +90,18 @@ spatialmind trace YOUR_TASK_ID
 ~~~
 
 The reference parser supports English/Chinese aliases for four semantic rooms and two demonstration object classes. It intentionally asks for clarification instead of pretending to understand unsupported arbitrary instructions. Replace it with an LLM/VLM-backed interpreter when needed, keeping the same typed task contract.
+
+## Optional LLM intent grounding
+
+For natural-language intent translation, SpatialMind also provides an explicit OpenAI-compatible model adapter. It is **disabled by default** and cannot issue free-form motor commands.
+
+~~~bash
+export OPENAI_API_KEY="YOUR_API_KEY"
+spatialmind demo --instruction "Go and inspect the first aid kit" --llm-model YOUR_MODEL
+# OpenAI-compatible local inference can use --llm-base-url http://localhost:8001/v1
+~~~
+
+The model must output a bounded **find/navigate** task targeting a known object or room. Invalid tasks are rejected rather than run. Model API latency and token usage (when returned by the provider) are recorded in the task-created event. JSON-mode compatibility is required. The browser dashboard also exposes a simple dialogue session: ambiguous instructions lead to clarification, and a follow-up can start a grounded task. **There is not yet live voice streaming or mid-motion user interruption.**
 
 ## 🖥 Mission Control
 
