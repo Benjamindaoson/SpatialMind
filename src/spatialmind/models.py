@@ -29,6 +29,7 @@ class Detection:
     position: Point
     confidence: float = 1.0
     track_id: str | None = None
+    room: str | None = None
 
     def __post_init__(self) -> None:
         if not 0 <= self.confidence <= 1:
