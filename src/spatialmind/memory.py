@@ -24,7 +24,7 @@ class RememberedObject:
 
 class SpatialMemory:
     def __init__(self, path: str | Path = ":memory:") -> None:
-        self.db = sqlite3.connect(str(path))
+        self.db = sqlite3.connect(str(path), check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""
             CREATE TABLE IF NOT EXISTS observations (
