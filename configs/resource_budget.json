@@ -1,0 +1,21 @@
+{
+  "disk_gib": 300,
+  "partitions": {
+    "runtime_and_models": 50,
+    "rosbag_raw": 140,
+    "benchmark_artifacts": 60,
+    "reserved_free": 50
+  },
+  "inference": {
+    "max_calls_per_task": 40,
+    "max_tokens_per_task": 12000,
+    "max_usd_per_task": 1,
+    "invocation": "event_triggered_only"
+  },
+  "evidence": {
+    "raw_rosbag": true,
+    "original_observations": true,
+    "git_sha": true,
+    "config_hash": true
+  }
+}
