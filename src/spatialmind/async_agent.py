@@ -163,14 +163,23 @@ class AsyncPhysicalAgent:
                         visited.clear()
                         replans+=1
                         self.events.emit(task_id,"mission_revised",mission=asdict(mission))
-                obs=await self.robot.observe()
-                updates=self.memory.update(obs)
-                self.events.emit(task_id,"physical_observation",pose=asdict(obs.pose),
-                                 detections=[asdict(x) for x in obs.detections],
-                                 observed_cells=len(obs.visible_cells),
-                                 coverage_quality=obs.coverage_quality,
-                                 memory_updates=updates)
-                verified=[d for d in obs.detections if mission.kind=="find"
+                try:
+                    obs=await self.robot.observe()
+                except TimeoutError:
+                    self.events.emit(task_id,"observation_unavailable",
+                                     search_requires_sensor=mission.kind=="find")
+                    if mission.kind=="find":
+                        status,reason="failed","perception_unavailable"
+                        break
+                    obs=None
+                if obs is not None:
+                    updates=self.memory.update(obs)
+                    self.events.emit(task_id,"physical_observation",pose=asdict(obs.pose),
+                                     detections=[asdict(x) for x in obs.detections],
+                                     observed_cells=len(obs.visible_cells),
+                                     coverage_quality=obs.coverage_quality,
+                                     memory_updates=updates)
+                verified=[d for d in (obs.detections if obs else ()) if mission.kind=="find"
                           and d.label==mission.target
                           and d.confidence>=self.min_detection_confidence
                           and (mission.room is None or self.map.room_for(d.pose)==mission.room)]
