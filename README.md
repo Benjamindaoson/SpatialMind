@@ -8,7 +8,7 @@
 [![Core CI](https://github.com/Benjamindaoson/SpatialMind/actions/workflows/ci.yml/badge.svg)](https://github.com/Benjamindaoson/SpatialMind/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![ROS2](https://img.shields.io/badge/ROS2%2FNav2-adapter-557C95)
-![Status](https://img.shields.io/badge/Stage-executable%20grid%20prototype-22A58F)
+![Status](https://img.shields.io/badge/Stage-Physical%20Agent%20v0.2%20%7C%20Gazebo%20unverified-22A58F)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 **[Quick Start](#-quick-start)** · **[Architecture](#-system-architecture)** · **[Experiments](#-intervention-benchmark)** · **[Mission Control](#-mission-control)** · **[ROS 2 Integration](#-ros-2--nav2-integration)** · **[中文说明](#-中文说明)**
@@ -20,6 +20,42 @@
 ![SpatialMind architecture](docs/images/architecture.svg)
 
 > **Implementation status (v0.1):** The zero-GPU Python grid simulator, semantic-room navigation, temporal SQLite memory, line-of-sight observation, active-viewpoint search, bounded context, navigation retries, checkpoints, structured telemetry, CLI, benchmark, automated tests and optional browser dashboard are implemented. A ROS2/Nav2 action transport adapter is provided. **This is NOT yet a Gazebo/TurtleBot deployment, an RGB-D perception stack, a VLA model, or a validated physical-robot system.** The distinction is deliberate and auditable.
+
+---
+
+## Physical AI v0.2 — Executable code, explicit validation gates
+
+| Workstream | Committed implementation | Evidence level |
+|---|---|---|
+| G0 Robot abstraction | Metric poses + coordinate frame/time/covariance; async robot interface; single-mission actor | **Software tests passed** |
+| G1 Gazebo/Nav2 | Generated SDF indoor world, aligned PGM+YAML map, semantic waypoints, RGBD-equipped robot builder and Nav2 Action adapter | **Source/assets; Gazebo runtime NOT validated here** |
+| G2 Measured perception | RGB8/BGR8 + depth32/16 codecs, synchronized camera intrinsics, TF3D optical projection, conservative visibility, identity/uncertainty beliefs | **Codec/geometry tests; live RGBD NOT validated here** |
+| G3 Long-horizon execution | Async task cancellation, goal revision, event trace, stop, retry, persisted checkpoint resume with map-frame gating | **Software tests passed** |
+| G4 Baselines | 7 interventions × 4 policies × seeds, four map topology variants, external oracle, paired bootstrap, CSV/SVG and replayable traces | **Metric simulation only** |
+| G5 MLOps | Semantic event-triggered model budgets, model usage trace, memory/latency instrumentation, disk quotas, rosbag scripts and CI | **Software tests, no hardware inference benchmark** |
+
+**New quickstart (Python 3.11+, no GPU or API key):**
+
+~~~bash
+python -m pip install -e ".[api,dev]"
+
+# Multi-topology, paired Physical Agent experiment.
+spatialmind physical-benchmark --seeds 3 \
+  --output-dir artifacts/physical-eval --trace
+
+# Async metric robot control panel: cancellation, revisions, temporal memory.
+uvicorn spatialmind.physical_api:app --host 127.0.0.1 --port 8001
+# Open http://127.0.0.1:8001
+
+# Generate reproducible Gazebo indoor world, occupancy map and semantic rooms.
+python scripts/generate_gazebo_scene.py --out simulation/generated
+~~~
+
+![Physical Agent architecture](docs/images/architecture.svg)
+
+The metric simulation obtains object evidence exclusively through the robot observation interface; a separate evaluator may consult synthetic truth **only after** the mission. The ROS2 package uses Nav2 actions and a real RGB-D message bridge; it does not fabricate visual detections from Gazebo world APIs. Actual Gazebo integration and real hardware results require running the procedures on a ROS2-equipped machine.
+
+Detailed specifications: **[Gazebo/ROS2 runbook](docs/ROS2_GAZEBO.md)** · **[Physical benchmark](docs/PHYSICAL_EVALUATION.md)** · **[Implementation plan](docs/IMPLEMENTATION_PLAN.md)**
 
 ---
 
