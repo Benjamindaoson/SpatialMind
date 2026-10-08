@@ -7,6 +7,8 @@ on:
       - 'ros2_ws/**'
       - 'scripts/generate_gazebo_scene.py'
       - 'scripts/build_rgbd_robot.py'
+      - 'scripts/bringup_spatialmind.sh'
+      - 'scripts/run_nav2_gazebo.sh'
       - '.github/workflows/ros2-verify.yml'
 
 permissions:
