@@ -62,7 +62,7 @@ class BeliefTests(unittest.TestCase):
             memory.update(MetricObservation(robot,(target,),frozenset({(4,0)}),.95))
             self.assertEqual(memory.get("box1").status,"observed")
             no_coverage=MetricObservation(Pose2D(0,0,stamp=t+1),(),
-                                          frozenset({(4,0)}),.99)
+                                          frozenset({(10,0)}),.99)
             memory.update(no_coverage)
             self.assertEqual(memory.get("box1").status,"observed")
             weak=MetricObservation(Pose2D(0,0,stamp=t+2),(),
