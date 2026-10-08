@@ -1,0 +1,31 @@
+{
+  "calibrated": false,
+  "version": "replace-with-real-map-revision",
+  "frame_id": "map",
+  "rooms": {
+    "lab": [
+      {
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "storage": [
+      {
+        "x": 1,
+        "y": 1
+      }
+    ],
+    "meeting": [
+      {
+        "x": 2,
+        "y": 2
+      }
+    ],
+    "office": [
+      {
+        "x": 3,
+        "y": 3
+      }
+    ]
+  }
+}
