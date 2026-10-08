@@ -113,6 +113,33 @@ class AsyncAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(b.evidence_ref)
         self.assertTrue(any(x["type"]=="goal_verified" for x in self.events.events(b.task_id)))
 
+    async def test_single_false_positive_cannot_complete_physical_task(self):
+        from spatialmind.physical import MetricObservation,ObjectEstimate
+        class OneFalseDetection(MetricSimRobot):
+            def __init__(self):
+                super().__init__()
+                self.objects.clear()
+                self.frames=0
+
+            async def observe(self):
+                observation=await super().observe()
+                self.frames+=1
+                if self.frames==1:
+                    fake=ObjectEstimate(
+                        "blue toolbox",Pose2D(2.3,2.2,stamp=observation.pose.stamp),
+                        .95,evidence_ref="camera:one-false-detection")
+                    return MetricObservation(
+                        observation.pose,(fake,),observation.visible_cells,
+                        observation.coverage_quality,observation.source)
+                return observation
+        robot=OneFalseDetection()
+        actor=AsyncPhysicalAgent(robot,demo_room_map(),self.memory,self.events)
+        result=await actor.run(Mission("find","blue toolbox",max_actions=4))
+        self.assertNotEqual(result.status,"succeeded")
+        self.assertIsNone(result.evidence_ref)
+        self.assertTrue(any(e["type"]=="verification_rejected"
+                            for e in self.events.events(result.task_id)))
+
     async def test_navigation_does_not_require_camera_but_search_does(self):
         class NoCamera(MetricSimRobot):
             async def observe(self):
