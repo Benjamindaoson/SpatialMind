@@ -1,0 +1,58 @@
+<!doctype html><html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpatialMind Physical Agent Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#080e1b;--panel:#152238;--border:#34465e;--text:#eef5ff;--muted:#9cb4cf;--teal:#64dfbf}
+*{box-sizing:border-box}body{background:radial-gradient(ellipse at 10% -20%,#2c4659,#080e1b 65%);color:var(--text);font:15px/1.55 system-ui;margin:0}main{max-width:1220px;margin:auto;padding:28px 24px 65px}
+nav{display:flex;align-items:center;justify-content:space-between}.logo{font-size:28px;font-weight:800;letter-spacing:-1px}.logo span{color:var(--teal)}
+.tag{color:var(--teal);font-size:12px;border:1px solid #2c7468;border-radius:22px;padding:5px 12px}
+h1{font-size:30px;margin:24px 0 2px}p{color:var(--muted);margin:0 0 20px}h2{font-size:16px;margin:0 0 14px}
+section{border:1px solid var(--border);background:linear-gradient(145deg,#182740,#111a2b);border-radius:16px;padding:21px}
+.layout{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}.wide{grid-column:1/-1}
+form{display:flex;gap:8px;flex-wrap:wrap}button,input,select{padding:10px;border:1px solid var(--border);border-radius:9px;background:#0e1928;color:var(--text);font:inherit}input{flex:1;min-width:140px}
+button{cursor:pointer;background:#273d55}button.primary{background:var(--teal);color:#09201c;font-weight:800;border:0}button:hover{filter:brightness(1.1)}
+button:disabled{opacity:.5}table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:9px 6px;text-align:left;border-bottom:1px solid #2b3f57}th{color:var(--muted);font-weight:500}
+pre{background:#0a1624;padding:15px;border-radius:9px;overflow:auto;white-space:pre-wrap;word-break:break-word;max-height:360px;font-size:12px;color:#bfd5e9}
+.stats{display:flex;gap:24px;flex-wrap:wrap;margin-top:15px}.val{font-size:23px;color:var(--teal);font-weight:800}.small{color:var(--muted);font-size:12px}
+footer{font-size:12px;color:var(--muted);margin-top:25px}@media(max-width:820px){.layout{grid-template-columns:1fr}.wide{grid-column:auto}main{padding:16px}}
+</style></head><body><main>
+<nav><div class="logo">Spatial<span>Mind</span> / Physical Lab</div><span class="tag">METRIC SENSOR SIMULATION</span></nav>
+<h1>Autonomous embodied missions</h1><p>Real asynchronous execution, spatial beliefs, live cancellation and observed-evidence tracking — no robot hardware connected.</p>
+<div class="layout">
+<section class="wide"><h2>Mission control</h2>
+<form id="mission">
+<select id="kind"><option value="find">Find object</option><option value="navigate">Navigate to room</option></select>
+<input id="target" value="blue toolbox" aria-label="Mission target">
+<input id="room" placeholder="Optional room constraint" aria-label="Room constraint">
+<button class="primary">Start mission</button>
+</form><div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+<button id="revise">Revise current mission</button><button id="cancel">Cancel active mission</button>
+<button id="move">Move toolbox → office</button><button id="refresh">Refresh</button></div>
+<p id="status" style="margin:12px 0 0">Mission controller idle</p></section>
+<section><h2>Live robot state</h2><div class="stats"><div><div id="pose" class="val">—</div><span class="small">Map coordinates, meters</span></div><div><div id="task" class="val">—</div><span class="small">Task status</span></div></div><h2 style="margin-top:25px">Semantic waypoints</h2><table><thead><tr><th>Room</th><th>X</th><th>Y</th></tr></thead><tbody id="map"></tbody></table></section>
+<section><h2>Persistent temporal beliefs</h2><table><thead><tr><th>Object</th><th>Location</th><th>Status</th><th>Confidence</th></tr></thead><tbody id="beliefs"></tbody></table></section>
+<section class="wide"><h2>Task events & provenance</h2><pre id="events">No mission yet.</pre></section>
+</div><footer>SpatialMind v0.2 · Pure-Python metric simulation · Not Gazebo/ROS2 or real-world measured performance. ROS2 deployment uses the separate Nav2 and RGB-D sensor integration.</footer>
+</main><script>
+const el=id=>document.getElementById(id);let active=null;
+async function request(url,method='GET',body){const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const a=await r.json();if(!r.ok)throw Error(a.detail||r.statusText);return a}
+const mission=()=>({kind:el('kind').value,target:el('target').value,room:el('room').value||null,max_actions:24});
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function update(){
+ try{
+  const s=await request('/api/physical/state');active=s.task_id;
+  el('pose').textContent=s.robot_pose.x.toFixed(1)+', '+s.robot_pose.y.toFixed(1);
+  el('task').textContent=s.task_status;
+  el('map').innerHTML=s.semantic_waypoints.map(p=>'<tr><td>'+esc(p.room)+'</td><td>'+p.pose.x+'</td><td>'+p.pose.y+'</td></tr>').join('');
+  el('beliefs').innerHTML=s.memory.map(b=>'<tr><td>'+esc(b.label)+'</td><td>'+b.pose.x.toFixed(1)+', '+b.pose.y.toFixed(1)+'</td><td>'+esc(b.status)+'</td><td>'+b.confidence.toFixed(2)+'</td></tr>').join('');
+  el('events').textContent=s.recent_events.map(x=>x.type+' · '+JSON.stringify(x.data)).join('\n')||'No mission yet.';
+ }catch(e){el('status').textContent=e.message}
+}
+async function act(fn){try{await fn();await update()}catch(e){el('status').textContent='Error: '+e.message}}
+el('mission').onsubmit=e=>{e.preventDefault();act(async()=>{const d=await request('/api/physical/tasks','POST',mission());active=d.task_id;el('status').textContent='Mission '+active+' started'})};
+el('revise').onclick=()=>act(async()=>{if(!active)throw Error('No mission');await request('/api/physical/tasks/'+active+'/revise','POST',mission());el('status').textContent='Revision requested'});
+el('cancel').onclick=()=>act(async()=>{if(!active)throw Error('No mission');await request('/api/physical/tasks/'+active+'/cancel','POST');el('status').textContent='Cancellation requested'});
+el('move').onclick=()=>act(async()=>{await request('/api/physical/intervene/move','POST',{object_id:'toolbox_a',room:'office'});el('status').textContent='Physical target moved; memory awaits new observation'});
+el('refresh').onclick=()=>update();setInterval(update,700);update();
+</script></body></html>
