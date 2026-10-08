@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .core import prepare_dataset, read_records, sha256_file
+from .core import prepare_dataset, read_records, sha256_file, verify_local_assets
 from .registry import DATASETS, dataset_info
 
 
@@ -34,6 +34,7 @@ def main(argv: list[str] | None = None):
     export.add_argument("--max-frames", type=int, default=1000)
     verify = sub.add_parser("verify", help="Check index digest, count and local paths")
     verify.add_argument("--manifest", required=True)
+    verify.add_argument("--assets", action="store_true", help="Check local source asset paths too")
     replay = sub.add_parser("replay", help="Offline real RGB-D pixel/depth replay")
     replay.add_argument("--manifest", required=True)
     replay.add_argument("--camera", required=True)
@@ -73,8 +74,12 @@ def main(argv: list[str] | None = None):
                 Path(doc["oracle_path"])) == doc["oracle_sha256"]
         result = {"verified": bool(verified), "count": count, "dataset": doc["dataset"],
                   "oracle_count": doc.get("oracle_count", 0)}
-        if not verified:
-            raise SystemExit("FAIL: records/oracle SHA256 or record count mismatch")
+        if args.assets:
+            assets = verify_local_assets(doc)
+            result["assets"] = assets
+            result["verified"] = result["verified"] and assets["verified"]
+        if not result["verified"]:
+            raise SystemExit("FAIL: index digest, count or local file reference is invalid")
     else:
         from .replay import replay_rgbd
         result = replay_rgbd(manifest=args.manifest, camera_file=args.camera,
