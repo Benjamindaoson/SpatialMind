@@ -1,0 +1,51 @@
+name: Gazebo Live Navigation Acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-nav-goal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      QT_QPA_PLATFORM: offscreen
+      LIBGL_ALWAYS_SOFTWARE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ROS2 Jazzy
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: jazzy
+      - name: Install Gazebo Harmonic
+        uses: gazebo-tooling/setup-gazebo@v0.3.0
+        with:
+          required-gazebo-distributions: harmonic
+          install-ros-gz: jazzy
+      - name: Install Nav2 simulator dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ros-jazzy-navigation2 ros-jazzy-nav2-bringup \
+            ros-jazzy-nav2-minimal-tb3-sim ros-jazzy-ros-gz \
+            ros-jazzy-nav2-msgs ros-jazzy-action-msgs
+      - name: Run actual Nav2 action and AMCL motion verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          source /opt/ros/jazzy/setup.bash
+          bash scripts/bringup_spatialmind.sh > /tmp/spatialmind-gazebo-live.log 2>&1 &
+          sim_pid=$!
+          trap 'kill "$sim_pid" 2>/dev/null || true' EXIT
+          python3 scripts/verify_live_navigation.py \
+            --x -3.0 --y -4.0 --timeout 150 | tee /tmp/spatialmind-nav-acceptance.json
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-navigation-acceptance
+          path: |
+            /tmp/spatialmind-gazebo-live.log
+            /tmp/spatialmind-nav-acceptance.json
+          if-no-files-found: ignore
