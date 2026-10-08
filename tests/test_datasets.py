@@ -173,6 +173,18 @@ class DatasetAdapterTests(unittest.TestCase):
         check = data_main(["verify", "--manifest", str(self.root/"prepared_tum"/"manifest.json")])
         self.assertTrue(check["verified"])
 
+    def test_local_asset_verification_detects_removed_source_file(self):
+        (self.source / "frame.png").write_bytes(b"rgb")
+        (self.source / "depth.png").write_bytes(b"depth")
+        (self.source / "rgb.txt").write_text("1 frame.png\\n")
+        (self.source / "depth.txt").write_text("1 depth.png\\n")
+        self._prepare("tum")
+        manifest = str(self.root / "prepared_tum" / "manifest.json")
+        self.assertTrue(data_main(["verify", "--manifest", manifest, "--assets"])["verified"])
+        (self.source / "depth.png").unlink()
+        with self.assertRaises(SystemExit):
+            data_main(["verify", "--manifest", manifest, "--assets"])
+
     def test_replay_actual_png_bytes_and_belief(self):
         from PIL import Image
         src = self.source
