@@ -67,6 +67,22 @@ spatialmind data prepare --dataset openloris --source data/openloris/office1-1 \
   --rgb-index color.txt --depth-index aligned_depth.txt
 ```
 
+If the official sequence is still in a ROS1 bag, SpatialMind can export **specified raw image topics** using the optional `rosbags` dependency. Inspect available topics first; never assume topic names, camera calibration or coordinate frames:
+
+```bash
+pip install -e ".[datasets-rosbag]"
+# Set topic names based on the particular recorded bag:
+spatialmind data export-bag --bag data/openloris/office1-1.bag \
+  --rgb-topic /YOUR_RGB_IMAGE_TOPIC \
+  --depth-topic /YOUR_ALIGNED_DEPTH_IMAGE_TOPIC \
+  --camera-info-topic /YOUR_RGB_CAMERA_INFO_TOPIC \
+  --depth-scale-to-m 0.001 --max-frames 1000 \
+  --output data/openloris/office1-1
+# Then run "spatialmind data prepare --dataset openloris" as above.
+```
+
+Only raw `rgb8/bgr8` and registered `16UC1/mono16` topic encodings are currently supported. Confirm the depth scale from the sensor and validate RGB-depth registration before using any metric projection. This does NOT generate a camera-to-world pose or a localization result.
+
 If data use different index names, pass their exact paths. OpenLORIS pose records are not automatically assumed to describe camera-optical world pose; `camera_world_pose` remains null. Provide a calibrated camera and validated TF/trajectory transformation before reporting metric localization. Pixel-only RGB-D replay is supported without pretending the camera has a global map pose.
 
 ### 3RScan — temporal object changes, offline oracle only
@@ -77,6 +93,8 @@ Official [3RScan toolkit](https://github.com/WaldJohannaU/3RScan), [FAQ](https:/
 spatialmind data prepare --dataset 3rscan --source data/3rscan \
   --output artifacts/datasets/3rscan --limit 2000
 ```
+
+The importer also inspects `sequence.zip` without extracting it and indexes each complete `frame-*.color.jpg / depth.pgm / pose.txt` triple as a scan-local RGB-D frame reference. No automatic geometric registration or global-coordinate merge occurs.
 
 Outputs reference/rescan scene links in `records.jsonl`, and instance labels plus object-level rigid/nonrigid/removed changes in separate `oracle.jsonl`. **3RScan transformation translations may be in millimetres**, so the importer retains source units and explicitly requires proper alignment before comparing poses across scans. The adapter does not claim to perform 3D mesh registration.
 
