@@ -44,6 +44,20 @@ jobs:
           done
           curl --fail --silent http://127.0.0.1:8000/healthz
           docker rm --force spatialmind-ci
+      - name: Smoke-test physical asynchronous API container
+        run: |
+          docker run --detach --name spatialmind-physical-ci \
+            --env SPATIALMIND_HEALTH_PORT=8001 \
+            --publish 127.0.0.1:8001:8001 \
+            spatialmind-ci uvicorn spatialmind.physical_api:app --host 0.0.0.0 --port 8001
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8001/healthz; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8001/api/physical/state
+          docker rm --force spatialmind-physical-ci
       - name: Preserve benchmark results
         if: always()
         uses: actions/upload-artifact@v4
