@@ -24,6 +24,14 @@ def main(argv: list[str] | None = None):
     ingest.add_argument("--pose-index")
     ingest.add_argument("--max-delta-s", type=float, default=.04)
     ingest.add_argument("--max-pose-delta-s", type=float, default=.05)
+    export = sub.add_parser("export-bag", help="Convert explicit ROS1/ROS2 RGB-D topics to indexed PNG")
+    export.add_argument("--bag", required=True)
+    export.add_argument("--output", required=True)
+    export.add_argument("--rgb-topic", required=True)
+    export.add_argument("--depth-topic", required=True)
+    export.add_argument("--camera-info-topic")
+    export.add_argument("--depth-scale-to-m", type=float, required=True)
+    export.add_argument("--max-frames", type=int, default=1000)
     verify = sub.add_parser("verify", help="Check index digest, count and local paths")
     verify.add_argument("--manifest", required=True)
     replay = sub.add_parser("replay", help="Offline real RGB-D pixel/depth replay")
@@ -46,6 +54,14 @@ def main(argv: list[str] | None = None):
             }
         result = prepare_dataset(args.dataset, args.source, args.output,
                                  limit=args.limit, **opts)
+    elif args.action == "export-bag":
+        from .rosbag_export import export_rosbag
+        result = export_rosbag(
+            args.bag, args.output, rgb_topic=args.rgb_topic,
+            depth_topic=args.depth_topic,
+            camera_info_topic=args.camera_info_topic,
+            depth_scale_to_m=args.depth_scale_to_m, max_frames=args.max_frames,
+        )
     elif args.action == "verify":
         doc = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
         path = Path(doc["records_path"])
