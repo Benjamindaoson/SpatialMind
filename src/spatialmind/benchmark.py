@@ -73,7 +73,8 @@ def run_trial(scenario: str, policy: str = "full") -> Trial:
         elif scenario == "blocked_corridor":
             world.set_obstacle(Point(9, 3))
         command = (
-            "Find the red first aid kit" if scenario == "find_first_aid"
+            "Go to the meeting room" if scenario == "blocked_corridor"
+            else "Find the red first aid kit" if scenario == "find_first_aid"
             else "Find the blue toolbox"
         )
         result = runtime.run(command, max_actions=90)
