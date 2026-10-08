@@ -16,6 +16,11 @@ class TaskBody(BaseModel):
     instruction: str = Field(min_length=1, max_length=500)
     max_actions: int = Field(default=80, ge=1, le=500)
 
+class ChatBody(BaseModel):
+    message: str = Field(min_length=1, max_length=500)
+    session_id: str | None = None
+    max_actions: int = Field(default=80, ge=1, le=500)
+
 class ObstacleBody(BaseModel):
     x: int
     y: int
@@ -34,6 +39,7 @@ runtime, world = open_runtime(
     interpreter=interpreter,
 )
 last_task_id: str | None = None
+sessions: dict[str, object] = {}
 
 @app.get("/", response_class=HTMLResponse)
 async def index() -> str:
@@ -65,6 +71,21 @@ async def create_task(body: TaskBody) -> dict:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     last_task_id = result.task_id
     return result.to_dict()
+
+@app.post("/api/chat")
+async def chat(body: ChatBody) -> dict:
+    global last_task_id
+    from spatialmind.dialogue import DialogueSession
+    if body.session_id and body.session_id in sessions:
+        session = sessions[body.session_id]
+    else:
+        session = DialogueSession(runtime)
+        sessions[session.session_id] = session
+    answer = session.say(body.message, max_actions=body.max_actions)
+    if answer.result:
+        last_task_id = answer.result.task_id
+    return answer.to_dict()
+
 
 @app.post("/api/world/move/{object_id}/{room}")
 async def move_object(object_id: str, room: str) -> dict:
