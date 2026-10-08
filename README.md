@@ -76,6 +76,8 @@ spatialmind demo --instruction "Go to the meeting room" --obstacle
 
 # 4. Compare intervention scenarios and agent policies
 spatialmind benchmark --output artifacts/benchmark.json
+# Optional seeded expansion with full per-trial event traces
+spatialmind benchmark --seeds 20 --output artifacts/benchmark-20seeds.json --trace-dir artifacts/traces
 
 # 5. Re-run all executable core tests
 python -m unittest discover -s tests -v
@@ -209,7 +211,7 @@ Each scenario is run against three **implemented** policies:
 spatialmind benchmark --output artifacts/benchmark.json
 ~~~
 
-The report contains per-trial success/failure, action count, path length in **grid steps**, replans and navigation failures, plus policy-level averages. The code computes results at runtime; **no benchmark percentages in this README are fabricated or represented as ROS2/Gazebo/real-world metrics.**
+The report contains per-trial success/failure, action count, path length in **grid steps**, replans and navigation failures, plus policy-level averages, a nearest-rank P95 path statistic and Wilson 95% success intervals. Optional seeded trials perturb starting object locations and can export evidence-linked event traces. The code computes results at runtime; **no benchmark percentages in this README are fabricated or represented as ROS2/Gazebo/real-world metrics.**
 
 This is a **small deterministic integration benchmark**, not statistically adequate evidence that the method beats contemporary embodied agents. The next research gate is to expand to multiple randomized maps, seeds, target placements and counterfactual conditions and to report confidence intervals.
 
