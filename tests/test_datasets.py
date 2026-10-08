@@ -176,8 +176,8 @@ class DatasetAdapterTests(unittest.TestCase):
     def test_local_asset_verification_detects_removed_source_file(self):
         (self.source / "frame.png").write_bytes(b"rgb")
         (self.source / "depth.png").write_bytes(b"depth")
-        (self.source / "rgb.txt").write_text("1 frame.png\\n")
-        (self.source / "depth.txt").write_text("1 depth.png\\n")
+        (self.source / "rgb.txt").write_text("1 frame.png\n")
+        (self.source / "depth.txt").write_text("1 depth.png\n")
         self._prepare("tum")
         manifest = str(self.root / "prepared_tum" / "manifest.json")
         self.assertTrue(data_main(["verify", "--manifest", manifest, "--assets"])["verified"])
